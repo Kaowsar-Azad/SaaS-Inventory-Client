@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "../../lib/auth-client";
@@ -13,25 +13,32 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // If already logged in, redirect to dashboard
+  const { data: session, isPending } = authClient.useSession();
+
+  useEffect(() => {
+    if (!isPending && session) {
+      router.replace("/dashboard");
+    }
+  }, [session, isPending, router]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // Sign in using Better Auth
       const { data, error: authError } = await authClient.signIn.email({
         email,
-        password
+        password,
       });
 
       if (authError) {
         throw new Error(authError.message || "Invalid credentials");
       }
 
-      // If successful, redirect to dashboard
-      // Note: Better Auth manages session via cookies automatically
-      router.push("/dashboard");
+      // Use replace so the login page isn't in browser history
+      router.replace("/dashboard");
 
     } catch (err) {
       setError(err.message);
