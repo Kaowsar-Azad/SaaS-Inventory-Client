@@ -20,6 +20,7 @@ export default function Sidebar() {
     { name: "Staff Users", href: "/dashboard/users", icon: "👨‍💼" },
     { name: "Reports", href: "/dashboard/reports", icon: "📑" },
     { name: "Financial Reports", href: "/dashboard/reports/financial", icon: "💰" },
+    { name: "Settings", href: "/dashboard/settings", icon: "⚙️" },
   ];
 
   return (

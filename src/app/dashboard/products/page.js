@@ -25,6 +25,7 @@ export default function ProductsPage() {
     price: "",
     stock: "",
     variants: [],
+    reorderLevel: 10,
   });
 
   const [editFormData, setEditFormData] = useState({
@@ -35,6 +36,7 @@ export default function ProductsPage() {
     price: "",
     stock: "",
     variants: [],
+    reorderLevel: 10,
   });
 
   const fetchProducts = async () => {
@@ -96,7 +98,7 @@ export default function ProductsPage() {
       });
 
       if (res.ok) {
-        setFormData({ name: "", sku: "", category: "", brand: "", price: "", stock: "", variants: [] });
+        setFormData({ name: "", sku: "", category: "", brand: "", price: "", stock: "", variants: [], reorderLevel: 10 });
         setShowAddForm(false);
         fetchProducts(); // refresh list
       } else {
@@ -316,6 +318,10 @@ export default function ProductsPage() {
               <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
               <input type="number" required value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Reorder Alert Level</label>
+              <input type="number" required value={formData.reorderLevel} onChange={(e) => setFormData({...formData, reorderLevel: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
             <div className="md:col-span-2 border-t border-gray-100 pt-4">
               <h3 className="text-md font-semibold text-gray-800 mb-2">Product Variants (Size / Color)</h3>
               
@@ -409,7 +415,8 @@ export default function ProductsPage() {
                           brand: product.brand?._id || "",
                           price: product.price,
                           stock: product.stock,
-                          variants: product.variants || []
+                          variants: product.variants || [],
+                          reorderLevel: product.reorderLevel ?? 10,
                         });
                       }}
                       className="text-blue-600 hover:text-blue-900 font-semibold transition-colors"
@@ -464,6 +471,10 @@ export default function ProductsPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Stock</label>
                 <input type="number" required value={editFormData.stock} onChange={(e) => setEditFormData({...editFormData, stock: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Reorder Alert Level</label>
+                <input type="number" required value={editFormData.reorderLevel} onChange={(e) => setEditFormData({...editFormData, reorderLevel: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
               </div>
               <div className="md:col-span-2 border-t border-gray-100 pt-4">
                 <h3 className="text-md font-semibold text-gray-800 mb-2">Product Variants (Size / Color)</h3>

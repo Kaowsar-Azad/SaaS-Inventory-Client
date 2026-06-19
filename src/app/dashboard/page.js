@@ -52,6 +52,17 @@ export default function DashboardOverview() {
     );
   }
 
+  const getCurrencySymbol = (code) => {
+    switch (code) {
+      case "BDT": return "৳";
+      case "EUR": return "€";
+      case "GBP": return "£";
+      case "INR": return "₹";
+      default: return "$";
+    }
+  };
+  const symbol = getCurrencySymbol(stats?.currency);
+
   const statCards = [
     { 
       title: "Total Products", 
@@ -65,7 +76,7 @@ export default function DashboardOverview() {
     },
     { 
       title: "Total Sales", 
-      value: stats?.totalSales ? `$${stats.totalSales.toLocaleString()}` : "$0", 
+      value: stats?.totalSales ? `${symbol}${stats.totalSales.toLocaleString()}` : `${symbol}0`, 
       color: "bg-green-500",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +86,7 @@ export default function DashboardOverview() {
     },
     { 
       title: "Total Purchases", 
-      value: stats?.totalPurchases ? `$${stats.totalPurchases.toLocaleString()}` : "$0", 
+      value: stats?.totalPurchases ? `${symbol}${stats.totalPurchases.toLocaleString()}` : `${symbol}0`, 
       color: "bg-purple-500",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +96,7 @@ export default function DashboardOverview() {
     },
     { 
       title: "Stock Value", 
-      value: stats?.totalStockValue ? `$${stats.totalStockValue.toLocaleString()}` : "$0", 
+      value: stats?.totalStockValue ? `${symbol}${stats.totalStockValue.toLocaleString()}` : `${symbol}0`, 
       color: "bg-amber-500",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +122,7 @@ export default function DashboardOverview() {
     stats.recentSales.forEach(sale => {
       recentActivities.push({
         text: `Sold ${sale.quantity} units of ${sale.productId?.name || "Product"}`,
-        sub: `Customer total: $${sale.totalAmount}`,
+        sub: `Customer total: ${symbol}${sale.totalAmount}`,
         time: new Date(sale.createdAt).toLocaleTimeString(),
         timestamp: new Date(sale.createdAt).getTime()
       });
@@ -121,7 +132,7 @@ export default function DashboardOverview() {
     stats.recentPurchases.forEach(purchase => {
       recentActivities.push({
         text: `Purchased ${purchase.quantity} units of ${purchase.productId?.name || "Product"}`,
-        sub: `Supplier total: $${purchase.totalAmount}`,
+        sub: `Supplier total: ${symbol}${purchase.totalAmount}`,
         time: new Date(purchase.createdAt).toLocaleTimeString(),
         timestamp: new Date(purchase.createdAt).getTime()
       });
@@ -318,7 +329,7 @@ export default function DashboardOverview() {
                         textAnchor="end" 
                         className="text-[10px] fill-gray-400 font-bold font-sans"
                       >
-                        ${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {symbol}{val.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </text>
                     </g>
                   );
@@ -435,7 +446,7 @@ export default function DashboardOverview() {
                   }}
                 >
                   <p className="text-gray-400 font-bold mb-1 tracking-wide uppercase text-[9px]">{hoveredPoint.label}</p>
-                  <p className="text-sm font-extrabold text-blue-400">${hoveredPoint.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="text-sm font-extrabold text-blue-400">{symbol}{hoveredPoint.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
               )}
             </>
@@ -443,6 +454,37 @@ export default function DashboardOverview() {
         </div>
       </div>
 
+      {/* Low Stock Alerts & Reorder Widget */}
+      {stats?.lowStockAlerts && stats.lowStockAlerts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center space-x-2.5 mb-4 text-red-600">
+            <span className="text-xl">⚠️</span>
+            <h2 className="text-lg font-bold text-gray-800">Low Stock & Reorder Alerts</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {stats.lowStockAlerts.map((alert, idx) => (
+              <div key={idx} className="bg-red-50/30 border border-red-100 rounded-xl p-4 flex flex-col justify-between hover:shadow-sm transition-all duration-200">
+                <div>
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-bold text-gray-800 text-sm truncate" title={alert.name}>{alert.name}</h3>
+                    <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-extrabold uppercase shrink-0">
+                      Stock: {alert.stock}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1 font-mono">SKU: {alert.sku}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Threshold Level: {alert.reorderLevel}</p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-red-100/50 flex justify-between items-center text-xs">
+                  <span className="text-gray-500 font-medium">Reorder Recommendation:</span>
+                  <span className="font-extrabold text-red-700 bg-red-100/70 px-2 py-0.5 rounded">
+                    +{alert.suggestedReorder} Units
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Activities Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

@@ -9,12 +9,16 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [activeCustomerDetails, setActiveCustomerDetails] = useState(null);
+  const [purchaseHistory, setPurchaseHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     address: "",
+    notes: "",
   });
 
   const [editFormData, setEditFormData] = useState({
@@ -22,7 +26,26 @@ export default function CustomersPage() {
     email: "",
     phone: "",
     address: "",
+    notes: "",
   });
+
+  const viewCustomerDetails = async (customer) => {
+    setActiveCustomerDetails(customer);
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/customers/${customer._id}/purchases`, {
+        credentials: "include"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPurchaseHistory(data);
+      }
+    } catch (err) {
+      console.error("Failed to load customer purchase history", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -57,7 +80,7 @@ export default function CustomersPage() {
       });
 
       if (res.ok) {
-        setFormData({ name: "", email: "", phone: "", address: "" });
+        setFormData({ name: "", email: "", phone: "", address: "", notes: "" });
         setShowAddForm(false);
         fetchCustomers();
       } else {
@@ -151,6 +174,10 @@ export default function CustomersPage() {
               <label className="block text-sm font-medium text-gray-700">Address</label>
               <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Notes</label>
+              <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows="2" placeholder="Customer preference notes, loyalty remarks..." className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
             <div className="md:col-span-2 pt-2">
               <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
                 Save Customer
@@ -187,16 +214,23 @@ export default function CustomersPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.address}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                     <button
+                      onClick={() => viewCustomerDetails(customer)}
+                      className="text-indigo-600 hover:text-indigo-900 font-semibold transition-colors mr-3"
+                    >
+                      View
+                    </button>
+                    <button
                       onClick={() => {
                         setEditingCustomer(customer);
                         setEditFormData({
                           name: customer.name,
                           email: customer.email || "",
                           phone: customer.phone,
-                          address: customer.address || ""
+                          address: customer.address || "",
+                          notes: customer.notes || "",
                         });
                       }}
-                      className="text-blue-600 hover:text-blue-900 font-semibold transition-colors"
+                      className="text-blue-600 hover:text-blue-900 font-semibold transition-colors mr-3"
                     >
                       Edit
                     </button>
@@ -235,6 +269,10 @@ export default function CustomersPage() {
                 <label className="block text-sm font-medium text-gray-700">Address</label>
                 <input type="text" value={editFormData.address} onChange={(e) => setEditFormData({...editFormData, address: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
               </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <textarea value={editFormData.notes} onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})} rows="3" placeholder="Preferences, special remarks..." className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              </div>
               <div className="md:col-span-2 flex space-x-3 pt-2">
                 <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
                   Save Changes
@@ -244,6 +282,87 @@ export default function CustomersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Customer details, notes & purchase history modal */}
+      {activeCustomerDetails && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="bg-white p-6 rounded-xl shadow-xl border border-gray-100 max-w-2xl w-full relative animate-in fade-in zoom-in-95 duration-200 font-sans">
+            <button
+              onClick={() => setActiveCustomerDetails(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{activeCustomerDetails.name}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 mb-6 bg-gray-50 p-3 rounded-lg">
+              <div><strong>Phone:</strong> {activeCustomerDetails.phone}</div>
+              <div><strong>Email:</strong> {activeCustomerDetails.email || "—"}</div>
+              <div className="sm:col-span-2"><strong>Address:</strong> {activeCustomerDetails.address || "—"}</div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Notes display */}
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-1">Customer Profile Notes</h3>
+                <div className="p-3 bg-blue-50 border border-blue-100 text-blue-900 rounded-lg text-sm italic min-h-[50px]">
+                  {activeCustomerDetails.notes ? activeCustomerDetails.notes : "No profile notes registered for this customer yet."}
+                </div>
+              </div>
+
+              {/* Purchase History list */}
+              <div>
+                <h3 className="text-md font-bold text-gray-800 mb-2">Purchase History</h3>
+                {historyLoading ? (
+                  <div className="py-8 text-center text-sm text-gray-400 animate-pulse">Loading transaction logs...</div>
+                ) : purchaseHistory.length === 0 ? (
+                  <div className="p-4 border border-dashed border-gray-200 text-center rounded-lg text-sm text-gray-400">
+                    No purchase history found for this customer.
+                  </div>
+                ) : (
+                  <div className="border border-gray-100 rounded-lg overflow-hidden max-h-[220px] overflow-y-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-xs">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Date</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Product</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Qty</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Price</th>
+                          <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {purchaseHistory.map((item) => (
+                          <tr key={item._id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 whitespace-nowrap text-gray-500">
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-2 font-medium text-gray-900">
+                              {item.productId?.name || "N/A"}
+                              <span className="block text-[9px] text-gray-400 font-normal">SKU: {item.productId?.sku || "N/A"}</span>
+                            </td>
+                            <td className="px-4 py-2 text-gray-500">{item.quantity}</td>
+                            <td className="px-4 py-2 text-gray-500">${item.unitPrice}</td>
+                            <td className="px-4 py-2 text-right font-bold text-gray-900">${item.totalAmount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setActiveCustomerDetails(null)}
+                className="bg-gray-800 text-white px-5 py-2 rounded-lg font-medium hover:bg-gray-950 transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
