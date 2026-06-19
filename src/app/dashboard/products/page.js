@@ -10,7 +10,13 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [newVariant, setNewVariant] = useState({ size: "", color: "", stock: 0 });
+  const [newEditVariant, setNewEditVariant] = useState({ size: "", color: "", stock: 0 });
+
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -18,6 +24,17 @@ export default function ProductsPage() {
     brand: "",
     price: "",
     stock: "",
+    variants: [],
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    sku: "",
+    category: "",
+    brand: "",
+    price: "",
+    stock: "",
+    variants: [],
   });
 
   const fetchProducts = async () => {
@@ -36,12 +53,32 @@ export default function ProductsPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, { credentials: "include" });
+      if (res.ok) setCategories(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchBrands = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brands`, { credentials: "include" });
+      if (res.ok) setBrands(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     if (!isPending) {
       if (!session) {
         router.push("/login");
       } else {
         fetchProducts();
+        fetchCategories();
+        fetchBrands();
       }
     }
   }, [session, isPending]);
@@ -59,12 +96,159 @@ export default function ProductsPage() {
       });
 
       if (res.ok) {
-        setFormData({ name: "", sku: "", category: "", brand: "", price: "", stock: "" });
+        setFormData({ name: "", sku: "", category: "", brand: "", price: "", stock: "", variants: [] });
         setShowAddForm(false);
         fetchProducts(); // refresh list
       } else {
         const errData = await res.json();
         alert(errData.message || "Failed to add product");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    }
+  };
+
+  const addVariantToAddForm = () => {
+    if (!newVariant.size && !newVariant.color) {
+      alert("Please enter size or color.");
+      return;
+    }
+    setFormData({
+      ...formData,
+      variants: [...(formData.variants || []), { ...newVariant }]
+    });
+    setNewVariant({ size: "", color: "", stock: 0 });
+  };
+
+  const removeVariantFromAddForm = (index) => {
+    const updated = [...(formData.variants || [])];
+    updated.splice(index, 1);
+    setFormData({ ...formData, variants: updated });
+  };
+
+  const addVariantToEditForm = () => {
+    if (!newEditVariant.size && !newEditVariant.color) {
+      alert("Please enter size or color.");
+      return;
+    }
+    setEditFormData({
+      ...editFormData,
+      variants: [...(editFormData.variants || []), { ...newEditVariant }]
+    });
+    setNewEditVariant({ size: "", color: "", stock: 0 });
+  };
+
+  const removeVariantFromEditForm = (index) => {
+    const updated = [...(editFormData.variants || [])];
+    updated.splice(index, 1);
+    setEditFormData({ ...editFormData, variants: updated });
+  };
+
+  const handleExcelImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const XLSX = await import("xlsx");
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rawData = XLSX.utils.sheet_to_json(ws);
+
+        const formattedData = rawData.map(row => {
+          const name = row["Product Name"] || row["Name"] || row["name"] || "";
+          const sku = String(row["SKU"] || row["sku"] || "").trim();
+          const categoryName = row["Category"] || row["category"] || "";
+          const brandName = row["Brand"] || row["brand"] || "";
+          const price = Number(row["Price"] || row["price"] || 0);
+          const stock = Number(row["Stock"] || row["stock"] || 0);
+
+          const matchedCategory = categories.find(c => c.name.toLowerCase() === String(categoryName).toLowerCase());
+          const matchedBrand = brands.find(b => b.name.toLowerCase() === String(brandName).toLowerCase());
+
+          return {
+            name,
+            sku,
+            category: matchedCategory ? matchedCategory._id : null,
+            brand: matchedBrand ? matchedBrand._id : null,
+            price,
+            stock,
+            variants: [],
+          };
+        }).filter(p => p.name && p.sku);
+
+        if (formattedData.length === 0) {
+          alert("No valid products found in the Excel sheet. Ensure columns 'Product Name' (or Name) and 'SKU' exist.");
+          return;
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/bulk`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(formattedData),
+        });
+
+        if (res.ok) {
+          alert(`Successfully imported ${formattedData.length} products!`);
+          fetchProducts();
+        } else {
+          const errData = await res.json();
+          alert(errData.message || "Failed to import products");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error parsing excel file: " + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = "";
+  };
+
+  const handleEditProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${editingProduct._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(editFormData),
+      });
+
+      if (res.ok) {
+        setEditingProduct(null);
+        fetchProducts(); // refresh list
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Failed to update product");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${productId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        fetchProducts(); // refresh list
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Failed to delete product");
       }
     } catch (err) {
       console.error(err);
@@ -84,12 +268,18 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Products</h1>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          {showAddForm ? "Cancel" : "+ Add Product"}
-        </button>
+        <div className="flex items-center space-x-3">
+          <label className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm cursor-pointer text-sm">
+            📥 Import Excel
+            <input type="file" accept=".xlsx, .xls" onChange={handleExcelImport} className="hidden" />
+          </label>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            {showAddForm ? "Cancel" : "+ Add Product"}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -106,11 +296,17 @@ export default function ProductsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Category</label>
-              <input type="text" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                <option value="">Select Category</option>
+                {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Brand</label>
-              <input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <select value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                <option value="">Select Brand</option>
+                {brands.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Price</label>
@@ -119,6 +315,38 @@ export default function ProductsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
               <input type="number" required value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+            <div className="md:col-span-2 border-t border-gray-100 pt-4">
+              <h3 className="text-md font-semibold text-gray-800 mb-2">Product Variants (Size / Color)</h3>
+              
+              {formData.variants && formData.variants.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {formData.variants.map((v, index) => (
+                    <span key={index} className="inline-flex items-center bg-gray-100 px-3 py-1 rounded-full text-xs font-medium text-gray-800">
+                      {v.size && `Size: ${v.size}`} {v.color && `Color: ${v.color}`} (Qty: {v.stock})
+                      <button type="button" onClick={() => removeVariantFromAddForm(index)} className="ml-2 text-red-500 hover:text-red-700 font-bold">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500">Size</label>
+                  <input type="text" placeholder="e.g. M, L, XL" value={newVariant.size} onChange={(e) => setNewVariant({...newVariant, size: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500">Color</label>
+                  <input type="text" placeholder="e.g. Red, Black" value={newVariant.color} onChange={(e) => setNewVariant({...newVariant, color: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs" />
+                </div>
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500">Stock Qty</label>
+                    <input type="number" value={newVariant.stock} onChange={(e) => setNewVariant({...newVariant, stock: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs" />
+                  </div>
+                  <button type="button" onClick={addVariantToAddForm} className="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-950 transition-colors shadow-sm">Add</button>
+                </div>
+              </div>
             </div>
             <div className="md:col-span-2 pt-2">
               <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
@@ -138,6 +366,7 @@ export default function ProductsPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -150,9 +379,17 @@ export default function ProductsPage() {
             ) : (
               products.map((product) => (
                 <tr key={product._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <div>{product.name}</div>
+                    {product.brand?.name && <div className="text-xs text-gray-400 mt-0.5">Brand: {product.brand.name}</div>}
+                    {product.variants?.length > 0 && (
+                      <div className="text-[10px] text-indigo-500 font-semibold mt-1">
+                        Variants: {product.variants.map(v => `${v.size || ""}/${v.color || ""}(${v.stock})`).join(", ")}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.sku}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category?.name || "—"}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${product.price}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -161,12 +398,117 @@ export default function ProductsPage() {
                       {product.stock}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                    <button
+                      onClick={() => {
+                        setEditingProduct(product);
+                        setEditFormData({
+                          name: product.name,
+                          sku: product.sku,
+                          category: product.category?._id || "",
+                          brand: product.brand?._id || "",
+                          price: product.price,
+                          stock: product.stock,
+                          variants: product.variants || []
+                        });
+                      }}
+                      className="text-blue-600 hover:text-blue-900 font-semibold transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product._id)}
+                      className="text-red-600 hover:text-red-900 font-semibold transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="bg-white p-6 rounded-xl shadow-xl border border-gray-100 max-w-lg w-full relative animate-in fade-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Product</h2>
+            <form onSubmit={handleEditProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Product Name</label>
+                <input type="text" required value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">SKU</label>
+                <input type="text" required value={editFormData.sku} onChange={(e) => setEditFormData({...editFormData, sku: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <select value={editFormData.category} onChange={(e) => setEditFormData({...editFormData, category: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                  <option value="">Select Category</option>
+                  {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Brand</label>
+                <select value={editFormData.brand} onChange={(e) => setEditFormData({...editFormData, brand: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                  <option value="">Select Brand</option>
+                  {brands.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Price</label>
+                <input type="number" required value={editFormData.price} onChange={(e) => setEditFormData({...editFormData, price: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Stock</label>
+                <input type="number" required value={editFormData.stock} onChange={(e) => setEditFormData({...editFormData, stock: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              </div>
+              <div className="md:col-span-2 border-t border-gray-100 pt-4">
+                <h3 className="text-md font-semibold text-gray-800 mb-2">Product Variants (Size / Color)</h3>
+                
+                {editFormData.variants && editFormData.variants.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {editFormData.variants.map((v, index) => (
+                      <span key={index} className="inline-flex items-center bg-gray-100 px-3 py-1 rounded-full text-xs font-medium text-gray-800">
+                        {v.size && `Size: ${v.size}`} {v.color && `Color: ${v.color}`} (Qty: {v.stock})
+                        <button type="button" onClick={() => removeVariantFromEditForm(index)} className="ml-2 text-red-500 hover:text-red-700 font-bold">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Size</label>
+                    <input type="text" placeholder="e.g. M, L" value={newEditVariant.size} onChange={(e) => setNewEditVariant({...newEditVariant, size: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Color</label>
+                    <input type="text" placeholder="e.g. Red, Black" value={newEditVariant.color} onChange={(e) => setNewEditVariant({...newEditVariant, color: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs" />
+                  </div>
+                  <div className="flex space-x-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500">Stock Qty</label>
+                      <input type="number" value={newEditVariant.stock} onChange={(e) => setNewEditVariant({...newEditVariant, stock: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs" />
+                    </div>
+                    <button type="button" onClick={addVariantToEditForm} className="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-950 transition-colors shadow-sm">Add</button>
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2 flex space-x-3 pt-2">
+                <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                  Save Changes
+                </button>
+                <button type="button" onClick={() => setEditingProduct(null)} className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors shadow-sm">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,12 +9,17 @@ export default function Sidebar() {
   const links = [
     { name: "Dashboard", href: "/dashboard", icon: "📊" },
     { name: "Products", href: "/dashboard/products", icon: "📦" },
+    { name: "Categories", href: "/dashboard/categories", icon: "🏷️" },
+    { name: "Brands", href: "/dashboard/brands", icon: "⭐" },
+    { name: "Warehouses", href: "/dashboard/warehouses", icon: "🏢" },
+    { name: "Stock Adjustments", href: "/dashboard/adjustments", icon: "🔧" },
     { name: "Suppliers", href: "/dashboard/suppliers", icon: "🏭" },
     { name: "Customers", href: "/dashboard/customers", icon: "👥" },
     { name: "Purchases", href: "/dashboard/purchases", icon: "🛒" },
     { name: "Sales", href: "/dashboard/sales", icon: "📈" },
     { name: "Staff Users", href: "/dashboard/users", icon: "👨‍💼" },
     { name: "Reports", href: "/dashboard/reports", icon: "📑" },
+    { name: "Financial Reports", href: "/dashboard/reports/financial", icon: "💰" },
   ];
 
   return (
