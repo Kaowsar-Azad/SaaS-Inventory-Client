@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../../lib/auth-client";
+import * as XLSX from "xlsx";
+import { 
+  FaChartLine, 
+  FaChartBar, 
+  FaMoneyBillWave, 
+  FaSearch, 
+  FaArrowUp, 
+  FaArrowDown,
+  FaFileExcel,
+  FaFilePdf
+} from "react-icons/fa";
 
 export default function FinancialReportsPage() {
   const router = useRouter();
@@ -87,6 +98,130 @@ export default function FinancialReportsPage() {
     t.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleExportExcel = () => {
+    if (activeTab === "pl") {
+      if (filteredTransactions.length === 0) {
+        alert("No transaction data to export.");
+        return;
+      }
+      const excelData = filteredTransactions.map(tx => ({
+        "Date": tx.date.toLocaleDateString(),
+        "Description": tx.description,
+        "Type": tx.type,
+        "Details": tx.details,
+        "Amount": tx.type === "Revenue" ? tx.amount : -tx.amount
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Profit & Loss");
+      XLSX.writeFile(workbook, `profit_loss_report_${new Date().getTime()}.xlsx`);
+    } else {
+      const taxTransactions = filteredTransactions.filter(t => t.type === "Revenue");
+      if (taxTransactions.length === 0) {
+        alert("No VAT/Tax logs to export.");
+        return;
+      }
+      const excelData = taxTransactions.map(tx => ({
+        "Date": tx.date.toLocaleDateString(),
+        "Sale Description": tx.description,
+        "Sale Amount": `$${tx.amount}`,
+        "VAT Rate": "15.0%",
+        "Accumulated VAT": `$${tx.tax}`
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "VAT Tax Logs");
+      XLSX.writeFile(workbook, `vat_tax_report_${new Date().getTime()}.xlsx`);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+      
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.setTextColor(40);
+      
+      if (activeTab === "pl") {
+        if (filteredTransactions.length === 0) {
+          alert("No transaction data to export.");
+          return;
+        }
+        
+        doc.text("Profit & Loss Report", 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+        doc.text(`Total Revenue: $${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}  |  Total Expenses: $${totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, 34);
+        doc.text(`Net Income: $${netIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, 40);
+        
+        const tableColumn = ["Date", "Description", "Type", "Details", "Amount"];
+        const tableRows = filteredTransactions.map(tx => [
+          tx.date.toLocaleDateString(),
+          tx.description,
+          tx.type,
+          tx.details,
+          tx.type === "Revenue" 
+            ? `+$${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : `-$${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        ]);
+        
+        autoTable(doc, {
+          startY: 46,
+          head: [tableColumn],
+          body: tableRows,
+          theme: "striped",
+          headStyles: { fillColor: [59, 130, 246] }, // blue-500
+          alternateRowStyles: { fillColor: [243, 244, 246] }
+        });
+        
+        doc.save(`profit_loss_report_${new Date().getTime()}.pdf`);
+      } else {
+        const taxTransactions = filteredTransactions.filter(t => t.type === "Revenue");
+        if (taxTransactions.length === 0) {
+          alert("No VAT/Tax logs to export.");
+          return;
+        }
+        
+        doc.text("VAT / Tax Report", 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+        doc.text(`Total Sales Amount: $${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}  |  Total Accumulated VAT (15%): $${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, 34);
+        
+        const tableColumn = ["Date", "Sale Description", "Sale Amount", "VAT Rate", "Accumulated VAT"];
+        const tableRows = taxTransactions.map(tx => [
+          tx.date.toLocaleDateString(),
+          tx.description,
+          `$${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+          "15.0%",
+          `$${tx.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        ]);
+        
+        autoTable(doc, {
+          startY: 40,
+          head: [tableColumn],
+          body: tableRows,
+          theme: "striped",
+          headStyles: { fillColor: [79, 70, 229] }, // indigo-600
+          alternateRowStyles: { fillColor: [243, 244, 246] }
+        });
+        
+        doc.save(`vat_tax_report_${new Date().getTime()}.pdf`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate PDF report.");
+    }
+  };
+
   return (
     <div className="space-y-8 font-sans">
       <div>
@@ -121,8 +256,16 @@ export default function FinancialReportsPage() {
               {netIncome >= 0 ? "+" : ""}${netIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <span className={`text-xs font-semibold mt-2 ${netIncome >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-            {netIncome >= 0 ? "📈 In the Green" : "📉 In the Red"}
+          <span className={`text-xs font-semibold mt-2 flex items-center gap-1 ${netIncome >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+            {netIncome >= 0 ? (
+              <>
+                <FaArrowUp /> In the Green
+              </>
+            ) : (
+              <>
+                <FaArrowDown /> In the Red
+              </>
+            )}
           </span>
         </div>
 
@@ -141,35 +284,54 @@ export default function FinancialReportsPage() {
           <div className="flex space-x-2">
             <button
               onClick={() => setActiveTab("pl")}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 activeTab === "pl"
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              📊 Profit & Loss Breakdown
+              <FaChartBar /> Profit & Loss Breakdown
             </button>
             <button
               onClick={() => setActiveTab("tax")}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 activeTab === "tax"
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              💰 VAT / Tax Logs
+              <FaMoneyBillWave /> VAT / Tax Logs
             </button>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <input
-              type="text"
-              placeholder="Search transactions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-            <span className="absolute right-3 top-2 text-gray-400">🔍</span>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <span className="absolute right-3 top-2.5 text-gray-400">
+                <FaSearch className="w-3.5 h-3.5" />
+              </span>
+            </div>
+            
+            <div className="flex gap-2 shrink-0">
+              <button 
+                onClick={handleExportExcel}
+                className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <FaFileExcel className="w-3.5 h-3.5" /> Export Excel
+              </button>
+              <button 
+                onClick={handleExportPDF}
+                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <FaFilePdf className="w-3.5 h-3.5" /> Export PDF
+              </button>
+            </div>
           </div>
         </div>
 

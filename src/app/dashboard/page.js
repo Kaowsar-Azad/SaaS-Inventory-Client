@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../lib/auth-client";
+import { 
+  FaBoxes, 
+  FaChartLine, 
+  FaShoppingCart, 
+  FaCoins, 
+  FaExclamationTriangle 
+} from "react-icons/fa";
 
 export default function DashboardOverview() {
   const router = useRouter();
@@ -68,51 +75,31 @@ export default function DashboardOverview() {
       title: "Total Products", 
       value: stats?.totalProducts ?? 0, 
       color: "bg-blue-500",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      )
+      icon: <FaBoxes className="w-6 h-6" />
     },
     { 
       title: "Total Sales", 
       value: stats?.totalSales ? `${symbol}${stats.totalSales.toLocaleString()}` : `${symbol}0`, 
       color: "bg-green-500",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-      )
+      icon: <FaChartLine className="w-6 h-6" />
     },
     { 
       title: "Total Purchases", 
       value: stats?.totalPurchases ? `${symbol}${stats.totalPurchases.toLocaleString()}` : `${symbol}0`, 
       color: "bg-purple-500",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      )
+      icon: <FaShoppingCart className="w-6 h-6" />
     },
     { 
       title: "Stock Value", 
       value: stats?.totalStockValue ? `${symbol}${stats.totalStockValue.toLocaleString()}` : `${symbol}0`, 
       color: "bg-amber-500",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16v1m-4-6h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
+      icon: <FaCoins className="w-6 h-6" />
     },
     { 
       title: "Low Stock Items", 
       value: stats?.lowStockItems ?? 0, 
       color: "bg-red-500",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      )
+      icon: <FaExclamationTriangle className="w-6 h-6" />
     },
   ];
 
@@ -458,7 +445,7 @@ export default function DashboardOverview() {
       {stats?.lowStockAlerts && stats.lowStockAlerts.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center space-x-2.5 mb-4 text-red-600">
-            <span className="text-xl">⚠️</span>
+            <FaExclamationTriangle className="text-red-500 text-xl" />
             <h2 className="text-lg font-bold text-gray-800">Low Stock & Reorder Alerts</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

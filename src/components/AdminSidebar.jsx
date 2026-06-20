@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FaChartLine, FaBuilding } from "react-icons/fa";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
 
   const links = [
-    { name: "Overview", href: "/admin/dashboard", icon: "📈" },
-    { name: "Companies", href: "/admin/dashboard/companies", icon: "🏢" },
+    { name: "Overview", href: "/admin/dashboard", icon: FaChartLine },
+    { name: "Companies", href: "/admin/dashboard/companies", icon: FaBuilding },
   ];
 
   return (
@@ -27,7 +28,9 @@ export default function AdminSidebar() {
                 : "text-slate-400 hover:bg-slate-800 hover:text-white"
             }`}
           >
-            <span className="text-xl">{link.icon}</span>
+            <span className="text-xl">
+              <link.icon />
+            </span>
             <span className="font-medium">{link.name}</span>
           </Link>
         ))}

@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import { authClient } from "../../../../lib/auth-client";
+import { 
+  FaWarehouse, 
+  FaCoins, 
+  FaDownload, 
+  FaFileExcel,
+  FaFilePdf
+} from "react-icons/fa";
 
 export default function WarehouseReportsPage() {
   const router = useRouter();
@@ -70,6 +77,57 @@ export default function WarehouseReportsPage() {
     XLSX.writeFile(workbook, `inventory_${activeWarehouse.name.replace(/\s+/g, "_")}_${new Date().getTime()}.xlsx`);
   };
 
+  const handleExportPDF = async () => {
+    if (!activeWarehouse || filteredItems.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+      
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setTextColor(40);
+      doc.text(`Warehouse Inventory Report: ${activeWarehouse.name}`, 14, 22);
+      
+      // Subtitle
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Address: ${activeWarehouse.address || "No address provided"}`, 14, 28);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 34);
+      doc.text(`Total Stock: ${activeWarehouse.totalStock} units  |  Total Valuation: $${activeWarehouse.totalValue.toLocaleString()}`, 14, 40);
+      
+      const tableColumn = ["Product Name", "SKU", "Category", "Brand", "Stock Qty", "Unit Price", "Total Value"];
+      const tableRows = filteredItems.map(item => [
+        item.name,
+        item.sku,
+        item.category || "N/A",
+        item.brand || "N/A",
+        `${item.stock} Units`,
+        `$${item.price}`,
+        `$${item.stock * item.price}`
+      ]);
+      
+      autoTable(doc, {
+        startY: 46,
+        head: [tableColumn],
+        body: tableRows,
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246] }, // blue-500
+        alternateRowStyles: { fillColor: [243, 244, 246] }
+      });
+      
+      doc.save(`inventory_${activeWarehouse.name.replace(/\s+/g, "_")}_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate PDF report.");
+    }
+  };
+
   if (isPending || loading) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
@@ -99,8 +157,8 @@ export default function WarehouseReportsPage() {
       </div>
 
       {reports.length === 0 ? (
-        <div className="bg-white p-8 text-center rounded-xl shadow-sm border border-gray-100">
-          <span className="text-4xl mb-2 block">🏢</span>
+        <div className="bg-white p-8 text-center rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+          <FaWarehouse className="text-blue-500 text-5xl mb-3" />
           <h2 className="text-lg font-bold text-gray-800">No Warehouses Found</h2>
           <p className="text-gray-500 text-sm mt-1 mb-4">Please set up warehouses in the system to view reports.</p>
           <Link href="/dashboard/warehouses" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
@@ -154,7 +212,7 @@ export default function WarehouseReportsPage() {
                     <p className="text-xs text-gray-400 mt-0.5">📍 {activeWarehouse.address}</p>
                   </div>
                   <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 shrink-0 flex items-center gap-3">
-                    <span className="text-2xl">💰</span>
+                    <FaCoins className="text-blue-600 text-2xl" />
                     <div>
                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Total Valuation</p>
                       <p className="text-lg font-extrabold text-blue-600">${activeWarehouse.totalValue.toLocaleString()}</p>
@@ -172,12 +230,20 @@ export default function WarehouseReportsPage() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full sm:max-w-xs"
                     />
-                    <button 
-                      onClick={handleExportExcel}
-                      className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <span>📥</span> Export Excel
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={handleExportExcel}
+                        className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <FaFileExcel className="w-3.5 h-3.5" /> Export Excel
+                      </button>
+                      <button 
+                        onClick={handleExportPDF}
+                        className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <FaFilePdf className="w-3.5 h-3.5" /> Export PDF
+                      </button>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">

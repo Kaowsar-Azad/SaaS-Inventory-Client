@@ -3,6 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import * as XLSX from "xlsx";
+import { 
+  FaBoxes, 
+  FaChartLine, 
+  FaShoppingCart, 
+  FaWarehouse 
+} from "react-icons/fa";
 
 export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
@@ -74,6 +80,95 @@ export default function ReportsPage() {
     }
   };
 
+  const downloadPDFReport = async (type) => {
+    setLoading(true);
+    try {
+      let endpoint = "/products";
+      if (type === "sales") {
+        endpoint = "/sales";
+      } else if (type === "purchases") {
+        endpoint = "/purchases";
+      }
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+        credentials: "include",
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.length > 0) {
+        const { jsPDF } = await import("jspdf");
+        const { default: autoTable } = await import("jspdf-autotable");
+        
+        const doc = new jsPDF();
+        
+        // Header styling
+        doc.setFontSize(18);
+        doc.setTextColor(40);
+        doc.text(`${type.charAt(0).toUpperCase() + type.slice(1)} Report`, 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+        doc.text("SaaS Inventory Management System", 14, 33);
+        
+        let tableColumn = [];
+        let tableRows = [];
+        
+        if (type === "sales") {
+          tableColumn = ["Sale ID", "Product", "Customer", "Quantity", "Total Amount", "Date"];
+          tableRows = data.map(item => [
+            item._id,
+            item.productId?.name || "N/A",
+            item.customerId?.name || "N/A",
+            item.quantity,
+            `$${item.totalAmount}`,
+            new Date(item.createdAt).toLocaleDateString()
+          ]);
+        } else if (type === "purchases") {
+          tableColumn = ["Purchase ID", "Product", "Supplier", "Quantity", "Unit Price", "Total Amount", "Date"];
+          tableRows = data.map(item => [
+            item._id,
+            item.productId?.name || "N/A",
+            item.supplierId?.name || "N/A",
+            item.quantity,
+            `$${item.unitPrice}`,
+            `$${item.totalAmount}`,
+            new Date(item.createdAt).toLocaleDateString()
+          ]);
+        } else {
+          tableColumn = ["SKU", "Product Name", "Category", "Brand", "Current Stock", "Price"];
+          tableRows = data.map(item => [
+            item.sku,
+            item.name,
+            item.category?.name || "N/A",
+            item.brand?.name || "N/A",
+            item.stock,
+            `$${item.price}`
+          ]);
+        }
+        
+        autoTable(doc, {
+          startY: 40,
+          head: [tableColumn],
+          body: tableRows,
+          theme: "striped",
+          headStyles: { fillColor: [59, 130, 246] }, // blue
+          alternateRowStyles: { fillColor: [243, 244, 246] }
+        });
+        
+        doc.save(`${type}_report_${new Date().getTime()}.pdf`);
+      } else {
+        alert("No data available to download.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate PDF report.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       <div>
@@ -84,49 +179,76 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Inventory Report Card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
-          <div className="text-4xl mb-4">📦</div>
+          <FaBoxes className="text-blue-500 text-4xl mb-4" />
           <h2 className="text-lg font-bold mb-2 text-gray-800">Inventory Report</h2>
           <p className="text-gray-500 mb-6 text-xs leading-relaxed">Download a complete list of all products, categories, brands, and current global stock levels.</p>
-          <button 
-            onClick={() => downloadReport("inventory")}
-            disabled={loading}
-            className="mt-auto bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors w-full cursor-pointer text-xs"
-          >
-            {loading ? "Generating..." : "Download Excel"}
-          </button>
+          <div className="mt-auto w-full flex flex-col gap-2">
+            <button 
+              onClick={() => downloadReport("inventory")}
+              disabled={loading}
+              className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors w-full cursor-pointer text-xs animate-none"
+            >
+              {loading ? "Generating..." : "Download Excel"}
+            </button>
+            <button 
+              onClick={() => downloadPDFReport("inventory")}
+              disabled={loading}
+              className="bg-gray-800 text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-900 transition-colors w-full cursor-pointer text-xs"
+            >
+              {loading ? "Generating..." : "Download PDF"}
+            </button>
+          </div>
         </div>
 
         {/* Sales Report Card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
-          <div className="text-4xl mb-4">📈</div>
+          <FaChartLine className="text-green-500 text-4xl mb-4" />
           <h2 className="text-lg font-bold mb-2 text-gray-800">Sales Report</h2>
           <p className="text-gray-500 mb-6 text-xs leading-relaxed">Download a detailed ledger of all client sales transactions, totals, and sales dates.</p>
-          <button 
-            onClick={() => downloadReport("sales")}
-            disabled={loading}
-            className="mt-auto bg-green-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors w-full cursor-pointer text-xs"
-          >
-            {loading ? "Generating..." : "Download Excel"}
-          </button>
+          <div className="mt-auto w-full flex flex-col gap-2">
+            <button 
+              onClick={() => downloadReport("sales")}
+              disabled={loading}
+              className="bg-green-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors w-full cursor-pointer text-xs"
+            >
+              {loading ? "Generating..." : "Download Excel"}
+            </button>
+            <button 
+              onClick={() => downloadPDFReport("sales")}
+              disabled={loading}
+              className="bg-gray-800 text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-900 transition-colors w-full cursor-pointer text-xs"
+            >
+              {loading ? "Generating..." : "Download PDF"}
+            </button>
+          </div>
         </div>
 
         {/* Purchase Report Card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
-          <div className="text-4xl mb-4">🛒</div>
+          <FaShoppingCart className="text-purple-500 text-4xl mb-4" />
           <h2 className="text-lg font-bold mb-2 text-gray-800">Purchase Report</h2>
           <p className="text-gray-500 mb-6 text-xs leading-relaxed">Download a detailed history of all product restocking, unit rates, and supplier payments.</p>
-          <button 
-            onClick={() => downloadReport("purchases")}
-            disabled={loading}
-            className="mt-auto bg-purple-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors w-full cursor-pointer text-xs"
-          >
-            {loading ? "Generating..." : "Download Excel"}
-          </button>
+          <div className="mt-auto w-full flex flex-col gap-2">
+            <button 
+              onClick={() => downloadReport("purchases")}
+              disabled={loading}
+              className="bg-purple-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors w-full cursor-pointer text-xs"
+            >
+              {loading ? "Generating..." : "Download Excel"}
+            </button>
+            <button 
+              onClick={() => downloadPDFReport("purchases")}
+              disabled={loading}
+              className="bg-gray-800 text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-900 transition-colors w-full cursor-pointer text-xs"
+            >
+              {loading ? "Generating..." : "Download PDF"}
+            </button>
+          </div>
         </div>
 
         {/* Warehouse Report Card */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
-          <div className="text-4xl mb-4">🏢</div>
+          <FaWarehouse className="text-amber-500 text-4xl mb-4" />
           <h2 className="text-lg font-bold mb-2 text-gray-800">Warehouse Reports</h2>
           <p className="text-gray-500 mb-6 text-xs leading-relaxed">View detailed stock summaries, values, and product ledgers grouped by each godown location.</p>
           <Link 
