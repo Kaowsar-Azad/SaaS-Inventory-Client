@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
+import { FaQuestionCircle } from "react-icons/fa";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showSmtpHelp, setShowSmtpHelp] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -20,6 +22,15 @@ export default function SettingsPage() {
     currency: "USD",
     taxRate: 15,
     lowStockThreshold: 10,
+    smtpHost: "smtp.gmail.com",
+    smtpPort: 465,
+    smtpUser: "",
+    smtpPass: "",
+    hasSmtpPass: false,
+    whatsappSid: "",
+    whatsappToken: "",
+    whatsappFrom: "",
+    hasWhatsappToken: false,
   });
 
   const fetchSettings = async () => {
@@ -37,6 +48,15 @@ export default function SettingsPage() {
           currency: data.currency || "USD",
           taxRate: data.taxRate ?? 15,
           lowStockThreshold: data.lowStockThreshold ?? 10,
+          smtpHost: data.smtpHost || "smtp.gmail.com",
+          smtpPort: data.smtpPort || 465,
+          smtpUser: data.smtpUser || "",
+          smtpPass: "",
+          hasSmtpPass: !!data.hasSmtpPass,
+          whatsappSid: data.whatsappSid || "",
+          whatsappToken: "",
+          whatsappFrom: data.whatsappFrom || "",
+          hasWhatsappToken: !!data.hasWhatsappToken,
         });
       } else {
         setErrorMsg("Failed to retrieve company settings.");
@@ -221,6 +241,114 @@ export default function SettingsPage() {
                 min="1"
                 value={formData.lowStockThreshold} 
                 onChange={(e) => setFormData({...formData, lowStockThreshold: Number(e.target.value)})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* SMTP Mail Configuration Group */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Custom SMTP Mail Server (Optional)</h2>
+          <p className="text-xs text-gray-400 mb-4">Configure your own email SMTP settings so customers and staff receive alerts from your business address.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600">SMTP Host</label>
+              <input 
+                type="text" 
+                placeholder="e.g. smtp.gmail.com"
+                value={formData.smtpHost} 
+                onChange={(e) => setFormData({...formData, smtpHost: e.target.value})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600">SMTP Port</label>
+              <input 
+                type="number" 
+                placeholder="e.g. 465 or 587"
+                value={formData.smtpPort} 
+                onChange={(e) => setFormData({...formData, smtpPort: Number(e.target.value)})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600">SMTP Username (Email)</label>
+              <input 
+                type="text" 
+                placeholder="e.g. your-name@business.com"
+                value={formData.smtpUser} 
+                onChange={(e) => setFormData({...formData, smtpUser: e.target.value})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+            </div>
+            <div>
+              <div className="flex items-center space-x-1.5">
+                <label className="block text-sm font-semibold text-gray-600">SMTP App Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowSmtpHelp(!showSmtpHelp)}
+                  className="text-gray-400 hover:text-blue-500 focus:outline-none transition-colors cursor-pointer"
+                  title="How to get Gmail App Password?"
+                >
+                  <FaQuestionCircle className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <input 
+                type="password" 
+                placeholder={formData.hasSmtpPass ? "•••••••••••••••• (Leave blank to keep current)" : "Enter app specific password"}
+                value={formData.smtpPass} 
+                onChange={(e) => setFormData({...formData, smtpPass: e.target.value})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+              {showSmtpHelp && (
+                <div className="mt-2 bg-blue-50 border border-blue-100 p-3.5 rounded-lg text-xs text-blue-800 space-y-1.5 animate-fade-in">
+                  <p className="font-bold">🔑 How to get Gmail App Password?</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Go to <strong>Google Account Settings</strong> -&gt; <strong>Security</strong>.</li>
+                    <li>Make sure <strong>2-Step Verification</strong> is turned ON.</li>
+                    <li>Visit direct link: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="underline font-bold text-blue-600">myaccount.google.com/apppasswords</a></li>
+                    <li>Enter App Name (e.g. <em>Inventory Alerts</em>) and click <strong>Create</strong>.</li>
+                    <li>Copy the 16-character code and paste it in the input above.</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* WhatsApp Notification Configuration Group */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Custom WhatsApp Alerts (Optional - Twilio Gateway)</h2>
+          <p className="text-xs text-gray-400 mb-4">Configure your own Twilio credentials to receive real-time inventory alerts on WhatsApp.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600">Twilio Account SID</label>
+              <input 
+                type="text" 
+                placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                value={formData.whatsappSid} 
+                onChange={(e) => setFormData({...formData, whatsappSid: e.target.value})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600">Twilio Auth Token</label>
+              <input 
+                type="password" 
+                placeholder={formData.hasWhatsappToken ? "•••••••••••••••• (Leave blank to keep current)" : "Twilio Auth Token"}
+                value={formData.whatsappToken} 
+                onChange={(e) => setFormData({...formData, whatsappToken: e.target.value})} 
+                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-600">Twilio WhatsApp Sender Number</label>
+              <input 
+                type="text" 
+                placeholder="whatsapp:+14155238886"
+                value={formData.whatsappFrom} 
+                onChange={(e) => setFormData({...formData, whatsappFrom: e.target.value})} 
                 className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
               />
             </div>
