@@ -1,0 +1,638 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { 
+  FaUsers, 
+  FaTruck, 
+  FaMoneyBillWave, 
+  FaFileExcel, 
+  FaFilePdf, 
+  FaHandHoldingUsd,
+  FaArrowRight
+} from "react-icons/fa";
+import AddPaymentModal from "../../../../components/AddPaymentModal";
+import * as XLSX from "xlsx";
+
+export default function DuesReportPage() {
+  const [data, setData] = useState({
+    totalCustomerDue: 0,
+    totalSupplierDue: 0,
+    customerDues: [],
+    supplierDues: [],
+    salesWithDues: [],
+    purchasesWithDues: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Navigation tabs: "customers" or "suppliers"
+  const [activeTab, setActiveTab] = useState("customers");
+  
+  // Add payment modal state
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [paymentType, setPaymentType] = useState("sale"); // "sale" or "purchase"
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  const fetchDues = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/dues-summary`, {
+        credentials: "include"
+      });
+      if (res.ok) {
+        const result = await res.json();
+        setData(result);
+      } else {
+        const errData = await res.json();
+        setError(errData.message || "Failed to load dues report data.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("An error occurred while fetching dues report.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDues();
+  }, []);
+
+  const handleOpenPaymentModal = (record, type) => {
+    setSelectedRecord(record);
+    setPaymentType(type);
+    setIsPaymentModalOpen(true);
+  };
+
+  const downloadExcelReport = (type) => {
+    try {
+      let excelData = [];
+      let filename = "";
+
+      if (type === "customers-summary") {
+        excelData = data.customerDues.map(item => ({
+          "Customer Name": item.name,
+          "Phone": item.phone || "N/A",
+          "Email": item.email || "N/A",
+          "Unpaid Invoices Count": item.salesCount,
+          "Total Due Amount": `$${item.totalDue.toFixed(2)}`
+        }));
+        filename = "customer_dues_summary";
+      } else if (type === "customers-detailed") {
+        excelData = data.salesWithDues.map(item => ({
+          "Date": new Date(item.createdAt).toLocaleDateString(),
+          "Sale ID": item._id,
+          "Customer": item.customerId?.name || "N/A",
+          "Product": item.productId?.name || "N/A",
+          "Quantity": item.quantity,
+          "Total Amount": `$${(item.totalAmount + (item.taxAmount || 0)).toFixed(2)}`,
+          "Paid Amount": `$${(item.amountPaid || 0).toFixed(2)}`,
+          "Due Amount": `$${(item.amountDue || 0).toFixed(2)}`
+        }));
+        filename = "customer_dues_detailed";
+      } else if (type === "suppliers-summary") {
+        excelData = data.supplierDues.map(item => ({
+          "Supplier Name": item.name,
+          "Phone": item.phone || "N/A",
+          "Email": item.email || "N/A",
+          "Unpaid Orders Count": item.purchasesCount,
+          "Total Due Amount": `$${item.totalDue.toFixed(2)}`
+        }));
+        filename = "supplier_dues_summary";
+      } else if (type === "suppliers-detailed") {
+        excelData = data.purchasesWithDues.map(item => ({
+          "Date": new Date(item.createdAt).toLocaleDateString(),
+          "Purchase ID": item._id,
+          "Supplier": item.supplierId?.name || "N/A",
+          "Product": item.productId?.name || "N/A",
+          "Quantity": item.quantity,
+          "Total Amount": `$${item.totalAmount.toFixed(2)}`,
+          "Paid Amount": `$${(item.amountPaid || 0).toFixed(2)}`,
+          "Due Amount": `$${(item.amountDue || 0).toFixed(2)}`
+        }));
+        filename = "supplier_dues_detailed";
+      }
+
+      if (excelData.length === 0) {
+        alert("No due records available to export.");
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Dues Report");
+      XLSX.writeFile(workbook, `${filename}_${new Date().getTime()}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export Excel report.");
+    }
+  };
+
+  const downloadPDFReport = async (type) => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+      
+      const doc = new jsPDF();
+      let title = "";
+      let tableColumn = [];
+      let tableRows = [];
+      let filename = "";
+
+      if (type === "customers-summary") {
+        title = "Customer Receivables Summary";
+        tableColumn = ["Customer Name", "Phone", "Email", "Unpaid Invoices", "Total Due"];
+        tableRows = data.customerDues.map(item => [
+          item.name,
+          item.phone || "N/A",
+          item.email || "N/A",
+          item.salesCount,
+          `$${item.totalDue.toFixed(2)}`
+        ]);
+        filename = "customer_dues_summary";
+      } else if (type === "customers-detailed") {
+        title = "Customer Receivables Detailed Invoices";
+        tableColumn = ["Date", "Customer", "Product", "Total", "Paid", "Due"];
+        tableRows = data.salesWithDues.map(item => [
+          new Date(item.createdAt).toLocaleDateString(),
+          item.customerId?.name || "N/A",
+          item.productId?.name || "N/A",
+          `$${(item.totalAmount + (item.taxAmount || 0)).toFixed(2)}`,
+          `$${(item.amountPaid || 0).toFixed(2)}`,
+          `$${(item.amountDue || 0).toFixed(2)}`
+        ]);
+        filename = "customer_dues_detailed";
+      } else if (type === "suppliers-summary") {
+        title = "Supplier Payables Summary";
+        tableColumn = ["Supplier Name", "Phone", "Email", "Unpaid Orders", "Total Due"];
+        tableRows = data.supplierDues.map(item => [
+          item.name,
+          item.phone || "N/A",
+          item.email || "N/A",
+          item.purchasesCount,
+          `$${item.totalDue.toFixed(2)}`
+        ]);
+        filename = "supplier_dues_summary";
+      } else if (type === "suppliers-detailed") {
+        title = "Supplier Payables Detailed Orders";
+        tableColumn = ["Date", "Supplier", "Product", "Total", "Paid", "Due"];
+        tableRows = data.purchasesWithDues.map(item => [
+          new Date(item.createdAt).toLocaleDateString(),
+          item.supplierId?.name || "N/A",
+          item.productId?.name || "N/A",
+          `$${item.totalAmount.toFixed(2)}`,
+          `$${(item.amountPaid || 0).toFixed(2)}`,
+          `$${(item.amountDue || 0).toFixed(2)}`
+        ]);
+        filename = "supplier_dues_detailed";
+      }
+
+      if (tableRows.length === 0) {
+        alert("No due records available to export.");
+        return;
+      }
+
+      // Header styling
+      doc.setFontSize(18);
+      doc.setTextColor(40);
+      doc.text(title, 14, 22);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text("SaaS Inventory Management System", 14, 33);
+      
+      autoTable(doc, {
+        startY: 40,
+        head: [tableColumn],
+        body: tableRows,
+        theme: "striped",
+        headStyles: { fillColor: type.startsWith("customers") ? [239, 68, 68] : [59, 130, 246] }, // Red for Customer, Blue for Supplier
+        alternateRowStyles: { fillColor: [243, 244, 246] }
+      });
+      
+      doc.save(`${filename}_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export PDF report.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+          <p className="text-sm text-gray-500">Loading Dues Report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 font-sans">
+        <h2 className="text-xl font-bold mb-2">Error</h2>
+        <p>{error}</p>
+        <button 
+          onClick={fetchDues} 
+          className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  const netDues = data.totalCustomerDue - data.totalSupplierDue;
+
+  return (
+    <div className="space-y-6 font-sans">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Dues Tracking & Reports</h1>
+        <p className="text-gray-500 text-sm mt-1">Track outstanding customer receivables and supplier payables with installment logging.</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Receivables Card */}
+        <div className="bg-gradient-to-br from-rose-500 to-red-600 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between transition-transform hover:-translate-y-1 duration-200">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-rose-100 text-xs font-semibold uppercase tracking-wider">Customer Receivables</p>
+              <h3 className="text-3xl font-black mt-2">${data.totalCustomerDue.toFixed(2)}</h3>
+            </div>
+            <div className="bg-white/20 p-3 rounded-xl">
+              <FaHandHoldingUsd className="text-2xl text-white" />
+            </div>
+          </div>
+          <p className="text-rose-100 text-xs mt-6">
+            Total unpaid customer balances across {data.salesWithDues.length} pending sale transactions.
+          </p>
+        </div>
+
+        {/* Payables Card */}
+        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between transition-transform hover:-translate-y-1 duration-200">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider">Supplier Payables</p>
+              <h3 className="text-3xl font-black mt-2">${data.totalSupplierDue.toFixed(2)}</h3>
+            </div>
+            <div className="bg-white/20 p-3 rounded-xl">
+              <FaTruck className="text-2xl text-white" />
+            </div>
+          </div>
+          <p className="text-blue-100 text-xs mt-6">
+            Total outstanding payments owed to suppliers across {data.purchasesWithDues.length} purchase orders.
+          </p>
+        </div>
+
+        {/* Net Outstanding Balance */}
+        <div className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between transition-transform hover:-translate-y-1 duration-200">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-teal-100 text-xs font-semibold uppercase tracking-wider">Net Receivables Balance</p>
+              <h3 className="text-3xl font-black mt-2">${netDues.toFixed(2)}</h3>
+            </div>
+            <div className="bg-white/20 p-3 rounded-xl">
+              <FaMoneyBillWave className="text-2xl text-white" />
+            </div>
+          </div>
+          <p className="text-teal-100 text-xs mt-6">
+            Net flow (Receivables minus Payables). A positive number indicates net incoming funds.
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs Menu */}
+      <div className="bg-white p-2 rounded-xl border border-gray-100 flex gap-2">
+        <button
+          onClick={() => setActiveTab("customers")}
+          className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all text-sm flex items-center justify-center gap-2 cursor-pointer ${
+            activeTab === "customers"
+              ? "bg-rose-50 text-rose-700 shadow-sm border border-rose-100"
+              : "text-gray-500 hover:bg-gray-50"
+          }`}
+        >
+          <FaUsers /> Customer Receivables ({data.customerDues.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("suppliers")}
+          className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all text-sm flex items-center justify-center gap-2 cursor-pointer ${
+            activeTab === "suppliers"
+              ? "bg-blue-50 text-blue-700 shadow-sm border border-blue-100"
+              : "text-gray-500 hover:bg-gray-50"
+          }`}
+        >
+          <FaTruck /> Supplier Payables ({data.supplierDues.length})
+        </button>
+      </div>
+
+      {/* Active Tab Panel */}
+      {activeTab === "customers" ? (
+        <div className="space-y-8">
+          {/* Summary Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Receivables Summary by Customer</h2>
+                <p className="text-xs text-gray-500 mt-1">Aggregated outstanding dues grouped by client accounts.</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => downloadExcelReport("customers-summary")}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFileExcel /> Export Excel
+                </button>
+                <button
+                  onClick={() => downloadPDFReport("customers-summary")}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFilePdf /> Export PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Contact Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email Address</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unpaid Invoices</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total Outstanding</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.customerDues.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No outstanding customer dues found.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.customerDues.map((item) => (
+                      <tr key={item.customerId} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.phone || "N/A"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.email || "N/A"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-rose-600 bg-rose-50/50 rounded-lg">{item.salesCount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-rose-600">${item.totalDue.toFixed(2)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Detailed Invoices Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Detailed Unpaid Sales Invoices</h2>
+                <p className="text-xs text-gray-500 mt-1">Individual sales records containing unpaid balance breakdowns.</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => downloadExcelReport("customers-detailed")}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFileExcel /> Export Excel
+                </button>
+                <button
+                  onClick={() => downloadPDFReport("customers-detailed")}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFilePdf /> Export PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Grand Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Paid</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Due</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.salesWithDues.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No outstanding invoices found.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.salesWithDues.map((sale) => {
+                      const grandTotal = sale.totalAmount + (sale.taxAmount || 0);
+                      return (
+                        <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(sale.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                            {sale.customerId?.name || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {sale.productId?.name || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sale.quantity}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">${(sale.amountPaid || 0).toFixed(2)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">${(sale.amountDue || 0).toFixed(2)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-yellow-100 text-yellow-800">
+                              {sale.paymentStatus || "partial"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => handleOpenPaymentModal(sale, "sale")}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            >
+                              Add Payment <FaArrowRight className="text-[10px]" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* Supplier Payables Summary */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Payables Summary by Supplier</h2>
+                <p className="text-xs text-gray-500 mt-1">Aggregated outstanding dues owed to supplier accounts.</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => downloadExcelReport("suppliers-summary")}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFileExcel /> Export Excel
+                </button>
+                <button
+                  onClick={() => downloadPDFReport("suppliers-summary")}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFilePdf /> Export PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Contact Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email Address</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unpaid Purchases</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total Outstanding</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.supplierDues.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No outstanding supplier payables found.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.supplierDues.map((item) => (
+                      <tr key={item.supplierId} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.phone || "N/A"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.email || "N/A"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-blue-600 bg-blue-50/50 rounded-lg">{item.purchasesCount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">${item.totalDue.toFixed(2)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Detailed Purchases Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Detailed Unpaid Restocking Orders</h2>
+                <p className="text-xs text-gray-500 mt-1">Individual purchase orders containing unpaid balance details.</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => downloadExcelReport("suppliers-detailed")}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFileExcel /> Export Excel
+                </button>
+                <button
+                  onClick={() => downloadPDFReport("suppliers-detailed")}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <FaFilePdf /> Export PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Grand Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Paid</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Due</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.purchasesWithDues.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No outstanding supplier orders found.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.purchasesWithDues.map((purchase) => (
+                      <tr key={purchase._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(purchase.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                          {purchase.supplierId?.name || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {purchase.productId?.name || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${purchase.totalAmount.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">${(purchase.amountPaid || 0).toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">${(purchase.amountDue || 0).toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-yellow-100 text-yellow-800">
+                            {purchase.paymentStatus || "partial"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <button
+                            onClick={() => handleOpenPaymentModal(purchase, "purchase")}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                          >
+                            Add Payment <FaArrowRight className="text-[10px]" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Installment Payment Modal integration */}
+      <AddPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={fetchDues}
+        totalAmount={
+          selectedRecord 
+            ? (paymentType === "sale" 
+                ? selectedRecord.totalAmount + (selectedRecord.taxAmount || 0) 
+                : selectedRecord.totalAmount) 
+            : 0
+        }
+        paidAmount={selectedRecord ? selectedRecord.amountPaid || 0 : 0}
+        dueAmount={selectedRecord ? selectedRecord.amountDue || 0 : 0}
+        recordId={selectedRecord ? selectedRecord._id : ""}
+        type={paymentType}
+      />
+    </div>
+  );
+}

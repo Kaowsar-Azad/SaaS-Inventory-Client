@@ -19,7 +19,8 @@ import {
   FaFileAlt, 
   FaMoneyBillWave, 
   FaCreditCard,
-  FaCog 
+  FaCog,
+  FaHandHoldingUsd
 } from "react-icons/fa";
 
 export default function Sidebar() {
@@ -40,6 +41,7 @@ export default function Sidebar() {
     { name: "Staff Users", href: "/dashboard/users", icon: FaUserTie },
     { name: "Activity Logs", href: "/dashboard/activities", icon: FaClipboardList },
     { name: "Reports", href: "/dashboard/reports", icon: FaFileAlt },
+    { name: "Dues Report", href: "/dashboard/reports/dues", icon: FaHandHoldingUsd },
     { name: "Financial Reports", href: "/dashboard/reports/financial", icon: FaMoneyBillWave },
     { name: "Billing & Subscription", href: "/dashboard/billing", icon: FaCreditCard },
     { name: "Settings", href: "/dashboard/settings", icon: FaCog },
@@ -72,7 +74,7 @@ export default function Sidebar() {
       moduleKey = "purchases";
     } else if (link.href === "/dashboard/sales") {
       moduleKey = "sales";
-    } else if (link.href === "/dashboard/reports" || link.href === "/dashboard/reports/financial") {
+    } else if (link.href === "/dashboard/reports" || link.href === "/dashboard/reports/financial" || link.href === "/dashboard/reports/dues") {
       moduleKey = "reports";
     } else if (link.href === "/dashboard/settings") {
       moduleKey = "settings";

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import AddPaymentModal from "../../../components/AddPaymentModal";
 
 export default function SalesPage() {
   const router = useRouter();
@@ -16,7 +17,12 @@ export default function SalesPage() {
     productId: "",
     quantity: "",
     unitPrice: "",
+    amountPaid: "",
+    paymentMethod: "cash",
   });
+
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -56,7 +62,7 @@ export default function SalesPage() {
       });
 
       if (res.ok) {
-        setFormData({ customerId: "", productId: "", quantity: "", unitPrice: "" });
+        setFormData({ customerId: "", productId: "", quantity: "", unitPrice: "", amountPaid: "", paymentMethod: "cash" });
         setShowAddForm(false);
         fetchData();
       } else {
@@ -69,6 +75,11 @@ export default function SalesPage() {
     }
   };
 
+  const handleOpenPaymentModal = (sale) => {
+    setSelectedSale(sale);
+    setIsPaymentModalOpen(true);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -79,7 +90,7 @@ export default function SalesPage() {
         <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Sales</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
         >
           {showAddForm ? "Cancel" : "+ Record Sale"}
         </button>
@@ -111,8 +122,21 @@ export default function SalesPage() {
               <label className="block text-sm font-medium text-gray-700">Unit Price</label>
               <input type="number" required min="0" step="0.01" value={formData.unitPrice} onChange={(e) => setFormData({...formData, unitPrice: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Amount Paid (Optional)</label>
+              <input type="number" min="0" step="0.01" value={formData.amountPaid} onChange={(e) => setFormData({...formData, amountPaid: e.target.value})} placeholder="Leave blank for full payment" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Payment Method</label>
+              <select value={formData.paymentMethod} onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="mfs">Mobile Banking</option>
+              </select>
+            </div>
             <div className="md:col-span-2 pt-2">
-              <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
+              <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer">
                 Save Sale
               </button>
             </div>
@@ -129,35 +153,76 @@ export default function SalesPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sales.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
                   No sales found.
                 </td>
               </tr>
             ) : (
-              sales.map((sale) => (
-                <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(sale.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {sale.customerId?.name || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {sale.productId?.name || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sale.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${sale.totalAmount}</td>
-                </tr>
-              ))
+              sales.map((sale) => {
+                const grandTotal = sale.totalAmount + (sale.taxAmount || 0);
+                return (
+                  <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(sale.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {sale.customerId?.name || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {sale.productId?.name || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sale.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">${(sale.amountPaid || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">${(sale.amountDue || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        sale.paymentStatus === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : sale.paymentStatus === "partial"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}>
+                        {sale.paymentStatus || "paid"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {sale.amountDue > 0 && (
+                        <button
+                          onClick={() => handleOpenPaymentModal(sale)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded transition-all cursor-pointer shadow-sm"
+                        >
+                          Add Payment
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      <AddPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={fetchData}
+        totalAmount={selectedSale ? selectedSale.totalAmount + (selectedSale.taxAmount || 0) : 0}
+        paidAmount={selectedSale ? selectedSale.amountPaid || 0 : 0}
+        dueAmount={selectedSale ? selectedSale.amountDue || 0 : 0}
+        recordId={selectedSale ? selectedSale._id : ""}
+        type="sale"
+      />
     </div>
   );
 }

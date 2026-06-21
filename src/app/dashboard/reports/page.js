@@ -7,7 +7,8 @@ import {
   FaBoxes, 
   FaChartLine, 
   FaShoppingCart, 
-  FaWarehouse 
+  FaWarehouse,
+  FaHandHoldingUsd
 } from "react-icons/fa";
 
 export default function ReportsPage() {
@@ -256,6 +257,19 @@ export default function ReportsPage() {
             className="mt-auto bg-amber-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-amber-600 transition-colors w-full text-center text-xs"
           >
             Open Audits
+          </Link>
+        </div>
+
+        {/* Dues Report Card */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all hover:shadow-md hover:-translate-y-0.5 duration-200">
+          <FaHandHoldingUsd className="text-rose-500 text-4xl mb-4" />
+          <h2 className="text-lg font-bold mb-2 text-gray-800">Dues Report</h2>
+          <p className="text-gray-500 mb-6 text-xs leading-relaxed">View summaries and detailed reports of outstanding customer receivables and supplier payables.</p>
+          <Link 
+            href="/dashboard/reports/dues"
+            className="mt-auto bg-rose-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-rose-600 transition-colors w-full text-center text-xs"
+          >
+            Track Dues
           </Link>
         </div>
       </div>
