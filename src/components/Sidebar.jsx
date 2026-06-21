@@ -18,6 +18,7 @@ import {
   FaClipboardList, 
   FaFileAlt, 
   FaMoneyBillWave, 
+  FaCreditCard,
   FaCog 
 } from "react-icons/fa";
 
@@ -40,6 +41,7 @@ export default function Sidebar() {
     { name: "Activity Logs", href: "/dashboard/activities", icon: FaClipboardList },
     { name: "Reports", href: "/dashboard/reports", icon: FaFileAlt },
     { name: "Financial Reports", href: "/dashboard/reports/financial", icon: FaMoneyBillWave },
+    { name: "Billing & Subscription", href: "/dashboard/billing", icon: FaCreditCard },
     { name: "Settings", href: "/dashboard/settings", icon: FaCog },
   ];
 
@@ -51,8 +53,8 @@ export default function Sidebar() {
     // Direct dashboard page is accessible to everyone
     if (link.href === "/dashboard") return true;
 
-    // Staff/Managers cannot view other staff or activities
-    if (link.href === "/dashboard/users" || link.href === "/dashboard/activities") return false;
+    // Staff/Managers cannot view other staff, activities or billing
+    if (link.href === "/dashboard/users" || link.href === "/dashboard/activities" || link.href === "/dashboard/billing") return false;
 
     // Resolve corresponding permission module keys
     let moduleKey = "";

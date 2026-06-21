@@ -31,7 +31,13 @@ export default function SettingsPage() {
     whatsappToken: "",
     whatsappFrom: "",
     hasWhatsappToken: false,
+    whatsappMethod: "twilio",
+    whatsappStatus: "disconnected",
   });
+
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
 
   const fetchSettings = async () => {
     try {
@@ -57,6 +63,8 @@ export default function SettingsPage() {
           whatsappToken: "",
           whatsappFrom: data.whatsappFrom || "",
           hasWhatsappToken: !!data.hasWhatsappToken,
+          whatsappMethod: data.whatsappMethod || "twilio",
+          whatsappStatus: data.whatsappStatus || "disconnected",
         });
       } else {
         setErrorMsg("Failed to retrieve company settings.");
@@ -107,6 +115,59 @@ export default function SettingsPage() {
       setErrorMsg("Something went wrong while saving settings.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConnectFreeWhatsapp = async () => {
+    setQrLoading(true);
+    setQrError("");
+    setQrCodeUrl("");
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/company/whatsapp/connect-free`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.qr) {
+          setQrCodeUrl(data.qr);
+        } else {
+          setQrError("Failed to load QR code. Try again.");
+        }
+      } else {
+        setQrError(data.message || "Failed to start WhatsApp Web client.");
+      }
+    } catch (err) {
+      console.error(err);
+      setQrError("Failed to initiate free connection.");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleDisconnectFreeWhatsapp = async () => {
+    setQrLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/company/whatsapp/disconnect-free`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setQrCodeUrl("");
+        setFormData(prev => ({
+          ...prev,
+          whatsappStatus: "disconnected",
+          whatsappMethod: "twilio"
+        }));
+        alert("Free WhatsApp disconnected successfully.");
+      } else {
+        alert("Failed to disconnect.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong.");
+    } finally {
+      setQrLoading(false);
     }
   };
 
@@ -319,40 +380,125 @@ export default function SettingsPage() {
 
         {/* WhatsApp Notification Configuration Group */}
         <div>
-          <h2 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Custom WhatsApp Alerts (Optional - Twilio Gateway)</h2>
-          <p className="text-xs text-gray-400 mb-4">Configure your own Twilio credentials to receive real-time inventory alerts on WhatsApp.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-600">Twilio Account SID</label>
-              <input 
-                type="text" 
-                placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                value={formData.whatsappSid} 
-                onChange={(e) => setFormData({...formData, whatsappSid: e.target.value})} 
-                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-600">Twilio Auth Token</label>
-              <input 
-                type="password" 
-                placeholder={formData.hasWhatsappToken ? "•••••••••••••••• (Leave blank to keep current)" : "Twilio Auth Token"}
-                value={formData.whatsappToken} 
-                onChange={(e) => setFormData({...formData, whatsappToken: e.target.value})} 
-                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-600">Twilio WhatsApp Sender Number</label>
-              <input 
-                type="text" 
-                placeholder="whatsapp:+14155238886"
-                value={formData.whatsappFrom} 
-                onChange={(e) => setFormData({...formData, whatsappFrom: e.target.value})} 
-                className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
-              />
+          <h2 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Custom WhatsApp Alerts (Optional)</h2>
+          <p className="text-xs text-gray-400 mb-4">Choose your preferred WhatsApp integration gateway below to receive alerts.</p>
+          
+          <div className="mb-6 max-w-xs">
+            <label className="block text-sm font-semibold text-gray-600 mb-2">WhatsApp Gateway Option</label>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, whatsappMethod: "twilio"})}
+                className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  formData.whatsappMethod === "twilio"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Twilio (Paid/Official)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, whatsappMethod: "free"})}
+                className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  formData.whatsappMethod === "free"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                QR Connect (Free)
+              </button>
             </div>
           </div>
+
+          {formData.whatsappMethod === "twilio" ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+              <div>
+                <label className="block text-sm font-semibold text-gray-600">Twilio Account SID</label>
+                <input 
+                  type="text" 
+                  placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                  value={formData.whatsappSid} 
+                  onChange={(e) => setFormData({...formData, whatsappSid: e.target.value})} 
+                  className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600">Twilio Auth Token</label>
+                <input 
+                  type="password" 
+                  placeholder={formData.hasWhatsappToken ? "•••••••••••••••• (Leave blank to keep current)" : "Twilio Auth Token"}
+                  value={formData.whatsappToken} 
+                  onChange={(e) => setFormData({...formData, whatsappToken: e.target.value})} 
+                  className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600">Twilio WhatsApp Sender Number</label>
+                <input 
+                  type="text" 
+                  placeholder="whatsapp:+14155238886"
+                  value={formData.whatsappFrom} 
+                  onChange={(e) => setFormData({...formData, whatsappFrom: e.target.value})} 
+                  className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 flex flex-col items-center text-center space-y-4 animate-fade-in">
+              <span className="text-xl">📱</span>
+              <div>
+                <h3 className="font-bold text-gray-800">WhatsApp Web Free Link</h3>
+                <p className="text-gray-500 text-xs mt-1">Connect your personal phone number by scanning a QR code from WhatsApp Settings -&gt; Linked Devices.</p>
+              </div>
+
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500">Status:</span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    formData.whatsappStatus === "connected"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}>
+                    {formData.whatsappStatus.toUpperCase()}
+                  </span>
+                </div>
+
+                {formData.whatsappStatus === "connected" ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectFreeWhatsapp}
+                    disabled={qrLoading}
+                    className="bg-red-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer"
+                  >
+                    Disconnect Phone
+                  </button>
+                ) : (
+                  <div className="space-y-4 flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={handleConnectFreeWhatsapp}
+                      disabled={qrLoading}
+                      className="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer shadow-sm"
+                    >
+                      {qrLoading ? "Generating QR Code..." : "Generate Connection QR Code"}
+                    </button>
+
+                    {qrCodeUrl && (
+                      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 animate-fade-in flex flex-col items-center space-y-2">
+                        <img src={qrCodeUrl} alt="WhatsApp QR Code" className="w-48 h-48" />
+                        <span className="text-[10px] text-gray-400 font-bold">Scan this QR Code from WhatsApp Linked Devices</span>
+                      </div>
+                    )}
+
+                    {qrError && (
+                      <span className="text-xs text-red-600 font-semibold">{qrError}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="pt-4 border-t border-gray-100 flex justify-end">

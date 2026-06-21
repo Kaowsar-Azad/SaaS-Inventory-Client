@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "../../lib/auth-client";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -10,6 +10,8 @@ export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
+  const [companyStatus, setCompanyStatus] = useState("active");
+  const [companyLoading, setCompanyLoading] = useState(true);
 
   useEffect(() => {
     // Only redirect if we are sure there's no session (isPending must be false)
@@ -18,13 +20,41 @@ export default function DashboardLayout({ children }) {
     }
   }, [session, isPending, router]);
 
-  // Always show spinner while session is loading
-  if (isPending) {
+  useEffect(() => {
+    if (session) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      fetch(`${apiUrl}/company/settings`, { credentials: "include" })
+        .then((res) => {
+          if (res.status === 402) {
+            setCompanyStatus("suspended");
+            return null;
+          }
+          if (res.ok) {
+            return res.json();
+          }
+          return null;
+        })
+        .then((data) => {
+          if (data) {
+            setCompanyStatus(data.status || "active");
+          }
+        })
+        .catch((err) => console.error("Error checking subscription status:", err))
+        .finally(() => setCompanyLoading(false));
+    } else {
+      if (!isPending) {
+        setCompanyLoading(false);
+      }
+    }
+  }, [session, isPending, pathname]);
+
+  // Always show spinner while session is loading or company status check is pending
+  if (isPending || (session && companyLoading)) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-gray-500">লোড হচ্ছে...</p>
+          <p className="text-sm text-gray-500">Loading...</p>
         </div>
       </div>
     );
@@ -75,6 +105,40 @@ export default function DashboardLayout({ children }) {
   };
 
   const authorized = isRouteAuthorized();
+
+  const isBillingPage = pathname === "/dashboard/billing";
+
+  if (companyStatus === "suspended" && !isBillingPage) {
+    return (
+      <div className="flex h-screen bg-gray-900 overflow-hidden font-sans text-white">
+        <Sidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-950 flex items-center justify-center p-6">
+            <div className="max-w-md w-full bg-gray-900 border border-gray-800 p-8 rounded-2xl shadow-2xl text-center space-y-6">
+              <div className="w-16 h-16 bg-red-950/50 text-red-500 rounded-full flex items-center justify-center mx-auto text-3xl border border-red-900/30">
+                ⚠️
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight">Subscription Expired!</h2>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Your company's subscription has been suspended. Your data and settings are safely preserved. To restore access, please renew your subscription.
+                </p>
+              </div>
+              <div>
+                <button
+                  onClick={() => router.push("/dashboard/billing")}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer animate-pulse-subtle"
+                >
+                  💳 Go to Billing Page to Pay
+                </button>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
