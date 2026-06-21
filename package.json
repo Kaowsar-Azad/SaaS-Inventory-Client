@@ -12,6 +12,7 @@
     "@heroui/react": "^3.2.1",
     "better-auth": "^1.6.19",
     "framer-motion": "^12.40.0",
+    "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "next": "16.2.9",

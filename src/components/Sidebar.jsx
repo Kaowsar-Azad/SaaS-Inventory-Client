@@ -20,7 +20,10 @@ import {
   FaMoneyBillWave, 
   FaCreditCard,
   FaCog,
-  FaHandHoldingUsd
+  FaHandHoldingUsd,
+  FaCashRegister,
+  FaTrashAlt,
+  FaUndo
 } from "react-icons/fa";
 
 export default function Sidebar() {
@@ -34,10 +37,13 @@ export default function Sidebar() {
     { name: "Brands", href: "/dashboard/brands", icon: FaStar },
     { name: "Warehouses", href: "/dashboard/warehouses", icon: FaWarehouse },
     { name: "Stock Adjustments", href: "/dashboard/adjustments", icon: FaWrench },
+    { name: "Damaged Items", href: "/dashboard/damages", icon: FaTrashAlt },
     { name: "Suppliers", href: "/dashboard/suppliers", icon: FaTruck },
     { name: "Customers", href: "/dashboard/customers", icon: FaUsers },
     { name: "Purchases", href: "/dashboard/purchases", icon: FaShoppingCart },
     { name: "Sales", href: "/dashboard/sales", icon: FaChartLine },
+    { name: "POS Screen", href: "/dashboard/pos", icon: FaCashRegister },
+    { name: "Returns Management", href: "/dashboard/returns", icon: FaUndo },
     { name: "Staff Users", href: "/dashboard/users", icon: FaUserTie },
     { name: "Activity Logs", href: "/dashboard/activities", icon: FaClipboardList },
     { name: "Reports", href: "/dashboard/reports", icon: FaFileAlt },
@@ -64,7 +70,7 @@ export default function Sidebar() {
       moduleKey = "products";
     } else if (link.href === "/dashboard/warehouses") {
       moduleKey = "warehouses";
-    } else if (link.href === "/dashboard/adjustments") {
+    } else if (link.href === "/dashboard/adjustments" || link.href === "/dashboard/damages") {
       moduleKey = "adjustments";
     } else if (link.href === "/dashboard/suppliers") {
       moduleKey = "suppliers";
@@ -72,7 +78,7 @@ export default function Sidebar() {
       moduleKey = "customers";
     } else if (link.href === "/dashboard/purchases") {
       moduleKey = "purchases";
-    } else if (link.href === "/dashboard/sales") {
+    } else if (link.href === "/dashboard/sales" || link.href === "/dashboard/pos" || link.href === "/dashboard/returns") {
       moduleKey = "sales";
     } else if (link.href === "/dashboard/reports" || link.href === "/dashboard/reports/financial" || link.href === "/dashboard/reports/dues") {
       moduleKey = "reports";

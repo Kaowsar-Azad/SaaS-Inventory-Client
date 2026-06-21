@@ -1,8 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
+import JsBarcode from "jsbarcode";
+
+const ProductBarcode = ({ sku }) => {
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (svgRef.current) {
+      try {
+        JsBarcode(svgRef.current, sku, {
+          format: "CODE128",
+          width: 1.2,
+          height: 25,
+          displayValue: true,
+          fontSize: 8,
+          margin: 2
+        });
+      } catch (err) {
+        console.error("Barcode generation failed for SKU:", sku, err);
+      }
+    }
+  }, [sku]);
+
+  return <svg ref={svgRef}></svg>;
+};
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -369,6 +393,7 @@ export default function ProductsPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
@@ -378,7 +403,7 @@ export default function ProductsPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {products.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
                   No products found. Add a product to get started.
                 </td>
               </tr>
@@ -395,6 +420,9 @@ export default function ProductsPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.sku}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <ProductBarcode sku={product.sku} />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category?.name || "—"}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${product.price}</td>
                   <td className="px-6 py-4 whitespace-nowrap">

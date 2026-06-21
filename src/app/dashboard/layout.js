@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }) {
       moduleKey = "products";
     } else if (pathname.startsWith("/dashboard/warehouses")) {
       moduleKey = "warehouses";
-    } else if (pathname.startsWith("/dashboard/adjustments")) {
+    } else if (pathname.startsWith("/dashboard/adjustments") || pathname.startsWith("/dashboard/damages")) {
       moduleKey = "adjustments";
     } else if (pathname.startsWith("/dashboard/suppliers")) {
       moduleKey = "suppliers";
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }) {
       moduleKey = "customers";
     } else if (pathname.startsWith("/dashboard/purchases")) {
       moduleKey = "purchases";
-    } else if (pathname.startsWith("/dashboard/sales")) {
+    } else if (pathname.startsWith("/dashboard/sales") || pathname.startsWith("/dashboard/pos") || pathname.startsWith("/dashboard/returns")) {
       moduleKey = "sales";
     } else if (pathname.startsWith("/dashboard/reports")) {
       moduleKey = "reports";
