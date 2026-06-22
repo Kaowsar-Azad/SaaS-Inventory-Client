@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }) {
         setCompanyLoading(false);
       }
     }
-  }, [session, isPending, pathname]);
+  }, [session, isPending]);
 
   // Always show spinner while session is loading or company status check is pending
   if (isPending || (session && companyLoading)) {

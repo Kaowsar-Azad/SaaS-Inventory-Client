@@ -23,6 +23,33 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+const CustomActiveDot = (props) => {
+  const { cx, cy } = props;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={10} fill="#6366f1" fillOpacity={0.2} />
+      <circle cx={cx} cy={cy} r={5} fill="#6366f1" stroke="#ffffff" strokeWidth={2} />
+    </g>
+  );
+};
+
+const CustomTooltip = ({ active, payload, label, symbol }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-sm border border-gray-100 p-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)] text-xs min-w-[140px]">
+        <p className="text-gray-400 font-bold mb-1 tracking-wider uppercase text-[9px]">{label}</p>
+        <div className="flex items-center space-x-1.5 mt-1">
+          <span className="w-2 h-2 rounded-full bg-indigo-600 shadow-sm shadow-indigo-200"></span>
+          <p className="text-sm font-extrabold text-gray-800">
+            {symbol}{payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function DashboardOverview() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
@@ -156,32 +183,7 @@ export default function DashboardOverview() {
   const revenueHistory = stats?.revenueHistory || [];
   const periodTotal = revenueHistory.reduce((sum, item) => sum + (item.amount || 0), 0);
 
-  const CustomActiveDot = (props) => {
-    const { cx, cy } = props;
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={10} fill="#6366f1" fillOpacity={0.2} />
-        <circle cx={cx} cy={cy} r={5} fill="#6366f1" stroke="#ffffff" strokeWidth={2} />
-      </g>
-    );
-  };
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/95 backdrop-blur-sm border border-gray-100 p-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)] text-xs min-w-[140px]">
-          <p className="text-gray-400 font-bold mb-1 tracking-wider uppercase text-[9px]">{label}</p>
-          <div className="flex items-center space-x-1.5 mt-1">
-            <span className="w-2 h-2 rounded-full bg-indigo-600 shadow-sm shadow-indigo-200"></span>
-            <p className="text-sm font-extrabold text-gray-800">
-              {symbol}{payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Extracted custom chart components to prevent remounting loops
 
   return (
     <div className="space-y-6 font-sans">
@@ -281,7 +283,7 @@ export default function DashboardOverview() {
                 />
                 <Tooltip 
                   cursor={{ stroke: '#d1d5db', strokeWidth: 1, strokeDasharray: '4 4' }} 
-                  content={<CustomTooltip />} 
+                  content={(props) => <CustomTooltip {...props} symbol={symbol} />} 
                 />
                 <Area 
                   type="monotone"

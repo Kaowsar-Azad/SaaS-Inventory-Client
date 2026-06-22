@@ -210,7 +210,7 @@ export default function AdminBackupsPage() {
                   <td colSpan="4" className="px-6 py-12 text-center text-slate-400">
                     <FaDatabase className="mx-auto text-4xl mb-3 text-slate-300" />
                     <p className="font-medium text-slate-500">No backups found</p>
-                    <p className="text-xs text-slate-400 mt-1">Click "Run Backup Now" to create your first backup.</p>
+                    <p className="text-xs text-slate-400 mt-1">Click &quot;Run Backup Now&quot; to create your first backup.</p>
                   </td>
                 </tr>
               ) : (

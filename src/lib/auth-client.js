@@ -1,8 +1,10 @@
 import { createAuthClient } from "better-auth/react";
 import { jwtClient } from "better-auth/client/plugins";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_API_URL.replace("/api", ""), // usually http://localhost:5000
+  baseURL: apiUrl.replace("/api", ""), // usually http://localhost:5000
   fetchOptions: {
     credentials: "include", // MUST: send cookies with every request
   },
