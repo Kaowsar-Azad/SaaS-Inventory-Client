@@ -3,10 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
+import { useLanguage } from "../../../context/LanguageContext";
+import { apiFetch } from "../../../lib/apiFetch";
 
 export default function CategoriesPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const { t } = useLanguage();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -24,7 +27,7 @@ export default function CategoriesPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -51,7 +54,7 @@ export default function CategoriesPage() {
   const handleAddCategory = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,18 +69,18 @@ export default function CategoriesPage() {
         fetchCategories();
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to add category");
+        alert(errData.message || t("categories.add_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("categories.something_wrong"));
     }
   };
 
   const handleEditCategory = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${editingCategory._id}`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${editingCategory._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -91,18 +94,18 @@ export default function CategoriesPage() {
         fetchCategories();
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to update category");
+        alert(errData.message || t("categories.update_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("categories.something_wrong"));
     }
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
+    if (!confirm(t("categories.confirm_delete"))) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${categoryId}`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${categoryId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -111,11 +114,11 @@ export default function CategoriesPage() {
         fetchCategories();
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to delete category");
+        alert(errData.message || t("categories.delete_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("categories.something_wrong"));
     }
   };
 
@@ -130,21 +133,21 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Categories</h1>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("categories.title")}</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
         >
-          {showAddForm ? "Cancel" : "+ Add Category"}
+          {showAddForm ? t("categories.cancel") : t("categories.add_button")}
         </button>
       </div>
 
       {showAddForm && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-200">
-          <h2 className="text-xl font-semibold mb-4">Add New Category</h2>
+          <h2 className="text-xl font-semibold mb-4">{t("categories.add_title")}</h2>
           <form onSubmit={handleAddCategory} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Category Name</label>
+              <label className="block text-sm font-medium text-gray-700">{t("categories.name")}</label>
               <input
                 type="text"
                 required
@@ -154,7 +157,7 @@ export default function CategoriesPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <label className="block text-sm font-medium text-gray-700">{t("categories.description")}</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -166,7 +169,7 @@ export default function CategoriesPage() {
               type="submit"
               className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
-              Save Category
+              {t("categories.save_btn")}
             </button>
           </form>
         </div>
@@ -176,16 +179,16 @@ export default function CategoriesPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("categories.name")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("categories.description")}</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{t("categories.actions")}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {categories.length === 0 ? (
               <tr>
                 <td colSpan="3" className="px-6 py-4 text-center text-sm text-gray-500">
-                  No categories found. Add a category to get started.
+                  {t("categories.no_data")}
                 </td>
               </tr>
             ) : (
@@ -204,13 +207,13 @@ export default function CategoriesPage() {
                       }}
                       className="text-blue-600 hover:text-blue-900 font-semibold transition-colors"
                     >
-                      Edit
+                      {t("categories.edit")}
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category._id)}
                       className="text-red-600 hover:text-red-900 font-semibold transition-colors"
                     >
-                      Delete
+                      {t("categories.delete")}
                     </button>
                   </td>
                 </tr>
@@ -223,10 +226,10 @@ export default function CategoriesPage() {
       {editingCategory && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex justify-center items-center p-4 animate-in fade-in duration-200">
           <div className="bg-white p-6 rounded-xl shadow-xl border border-gray-100 max-w-lg w-full relative">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Category</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">{t("categories.edit_title")}</h2>
             <form onSubmit={handleEditCategory} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category Name</label>
+                <label className="block text-sm font-medium text-gray-700">{t("categories.name")}</label>
                 <input
                   type="text"
                   required
@@ -236,7 +239,7 @@ export default function CategoriesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-gray-700">{t("categories.description")}</label>
                 <textarea
                   value={editFormData.description}
                   onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
@@ -249,14 +252,14 @@ export default function CategoriesPage() {
                   type="submit"
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
                 >
-                  Save Changes
+                  {t("categories.save_changes")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditingCategory(null)}
                   className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors shadow-sm"
                 >
-                  Cancel
+                  {t("categories.cancel")}
                 </button>
               </div>
             </form>

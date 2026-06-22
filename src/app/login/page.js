@@ -18,7 +18,11 @@ export default function Login() {
 
   useEffect(() => {
     if (!isPending && session) {
-      router.replace("/dashboard");
+      if (session.user?.role === "super_admin") {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/dashboard");
+      }
     }
   }, [session, isPending, router]);
 
@@ -37,8 +41,13 @@ export default function Login() {
         throw new Error(authError.message || "Invalid credentials");
       }
 
-      // Use replace so the login page isn't in browser history
-      router.replace("/dashboard");
+      // Check user role on success to redirect to correct dashboard
+      const userSession = await authClient.getSession();
+      if (userSession.data?.user?.role === "super_admin") {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/dashboard");
+      }
 
     } catch (err) {
       setError(err.message);

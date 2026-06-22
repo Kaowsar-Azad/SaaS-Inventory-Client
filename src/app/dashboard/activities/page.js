@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
 import { FaSearch, FaSyncAlt } from "react-icons/fa";
+import { useLanguage } from "../../../context/LanguageContext";
+import { apiFetch } from "../../../lib/apiFetch";
 
 export default function ActivityLogsPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const { t } = useLanguage();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,7 +23,7 @@ export default function ActivityLogsPage() {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activities`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/activities`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -60,8 +63,8 @@ export default function ActivityLogsPage() {
   if (session?.user?.role !== "admin" && session?.user?.role !== "super_admin") {
     return (
       <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200">
-        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-        <p>You do not have permission to view activity logs. Only the Company Admin can access this page.</p>
+        <h2 className="text-xl font-bold mb-2">{t("activities.access_denied")}</h2>
+        <p>{t("activities.access_denied_desc")}</p>
       </div>
     );
   }
@@ -70,14 +73,14 @@ export default function ActivityLogsPage() {
     <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">System Activity Logs</h1>
-          <p className="text-gray-500 text-sm mt-1">Audit log of manager and staff operations across inventory modules</p>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("activities.title")}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t("activities.desc")}</p>
         </div>
         <button 
           onClick={fetchLogs}
           className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm shadow-sm flex items-center gap-1.5 cursor-pointer"
         >
-          <FaSyncAlt className="w-3.5 h-3.5" /> Refresh Logs
+          <FaSyncAlt className="w-3.5 h-3.5" /> {t("activities.refresh")}
         </button>
       </div>
 
@@ -86,7 +89,7 @@ export default function ActivityLogsPage() {
           <div className="relative w-full sm:w-80">
             <input 
               type="text" 
-              placeholder="Search by user, action, module, or details..."
+              placeholder={t("activities.search_placeholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -101,18 +104,18 @@ export default function ActivityLogsPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Timestamp</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Operator</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Module</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Operation Details</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("activities.timestamp")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("activities.operator")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("activities.action")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("activities.module")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("activities.details")}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 text-sm">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-8 text-center text-gray-400 italic">
-                    No activity logs recorded yet.
+                    {t("activities.no_data")}
                   </td>
                 </tr>
               ) : (

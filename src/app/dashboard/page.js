@@ -1,8 +1,11 @@
 "use client";
+import { apiFetch } from "../../lib/apiFetch";
+
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../lib/auth-client";
+import { useLanguage } from "../../context/LanguageContext";
 import { 
   FaBoxes, 
   FaChartLine, 
@@ -10,19 +13,28 @@ import {
   FaCoins, 
   FaExclamationTriangle 
 } from "react-icons/fa";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function DashboardOverview() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const { t } = useLanguage();
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [days, setDays] = useState(7);
-  const [hoveredPoint, setHoveredPoint] = useState(null);
 
   const fetchStats = async (selectedDays = days) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${apiUrl}/dashboard/stats?days=${selectedDays}`, {
+      const res = await apiFetch(`${apiUrl}/dashboard/stats?days=${selectedDays}`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -72,44 +84,45 @@ export default function DashboardOverview() {
 
   const statCards = [
     { 
-      title: "Total Products", 
+      title: t("dashboard.total_products"), 
       value: stats?.totalProducts ?? 0, 
       color: "bg-blue-500",
       icon: <FaBoxes className="w-6 h-6" />
     },
     { 
-      title: "Total Sales", 
+      title: t("dashboard.total_sales"), 
       value: stats?.totalSales ? `${symbol}${stats.totalSales.toLocaleString()}` : `${symbol}0`, 
       color: "bg-green-500",
       icon: <FaChartLine className="w-6 h-6" />
     },
     { 
-      title: "Total Purchases", 
+      title: t("dashboard.total_purchases"), 
       value: stats?.totalPurchases ? `${symbol}${stats.totalPurchases.toLocaleString()}` : `${symbol}0`, 
       color: "bg-purple-500",
       icon: <FaShoppingCart className="w-6 h-6" />
     },
     { 
-      title: "Stock Value", 
+      title: t("dashboard.stock_value"), 
       value: stats?.totalStockValue ? `${symbol}${stats.totalStockValue.toLocaleString()}` : `${symbol}0`, 
       color: "bg-amber-500",
       icon: <FaCoins className="w-6 h-6" />
     },
     { 
-      title: "Low Stock Items", 
+      title: t("dashboard.low_stock_items"), 
       value: stats?.lowStockItems ?? 0, 
       color: "bg-red-500",
       icon: <FaExclamationTriangle className="w-6 h-6" />
     },
   ];
 
-  // Combine recent items into activities
   const recentActivities = [];
   if (stats?.recentSales?.length > 0) {
     stats.recentSales.forEach(sale => {
       recentActivities.push({
-        text: `Sold ${sale.quantity} units of ${sale.productId?.name || "Product"}`,
-        sub: `Customer total: ${symbol}${sale.totalAmount}`,
+        text: t("dashboard.sold_units")
+          .replace("{qty}", sale.quantity)
+          .replace("{product}", sale.productId?.name || t("damages.product")),
+        sub: t("dashboard.customer_total").replace("{total}", `${symbol}${sale.totalAmount}`),
         time: new Date(sale.createdAt).toLocaleTimeString(),
         timestamp: new Date(sale.createdAt).getTime()
       });
@@ -118,8 +131,10 @@ export default function DashboardOverview() {
   if (stats?.recentPurchases?.length > 0) {
     stats.recentPurchases.forEach(purchase => {
       recentActivities.push({
-        text: `Purchased ${purchase.quantity} units of ${purchase.productId?.name || "Product"}`,
-        sub: `Supplier total: ${symbol}${purchase.totalAmount}`,
+        text: t("dashboard.purchased_units")
+          .replace("{qty}", purchase.quantity)
+          .replace("{product}", purchase.productId?.name || t("damages.product")),
+        sub: t("dashboard.supplier_total").replace("{total}", `${symbol}${purchase.totalAmount}`),
         time: new Date(purchase.createdAt).toLocaleTimeString(),
         timestamp: new Date(purchase.createdAt).getTime()
       });
@@ -128,58 +143,52 @@ export default function DashboardOverview() {
   if (stats?.recentProducts?.length > 0) {
     stats.recentProducts.forEach(product => {
       recentActivities.push({
-        text: `New product added: ${product.name}`,
-        sub: `SKU: ${product.sku} - Stock: ${product.stock}`,
+        text: t("dashboard.new_product_added").replace("{name}", product.name),
+        sub: t("dashboard.sku_stock").replace("{sku}", product.sku).replace("{stock}", product.stock),
         time: new Date(product.createdAt).toLocaleTimeString(),
         timestamp: new Date(product.createdAt).getTime()
       });
     });
   }
 
-  // Sort activities by timestamp desc
   recentActivities.sort((a, b) => b.timestamp - a.timestamp);
 
-  // SVG Chart Setup
-  const width = 800;
-  const height = 300;
-  const paddingLeft = 60;
-  const paddingRight = 30;
-  const paddingTop = 40;
-  const paddingBottom = 40;
-
   const revenueHistory = stats?.revenueHistory || [];
-  const maxAmount = Math.max(...revenueHistory.map(d => d.amount), 100);
+  const periodTotal = revenueHistory.reduce((sum, item) => sum + (item.amount || 0), 0);
 
-  // Calculate plotting points
-  const points = revenueHistory.map((d, idx) => {
-    const x = paddingLeft + (idx / (revenueHistory.length - 1 || 1)) * (width - paddingLeft - paddingRight);
-    const y = height - paddingBottom - (d.amount / maxAmount) * (height - paddingTop - paddingBottom);
-    return { x, y, amount: d.amount, label: d.label, date: d.date };
-  });
+  const CustomActiveDot = (props) => {
+    const { cx, cy } = props;
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={10} fill="#6366f1" fillOpacity={0.2} />
+        <circle cx={cx} cy={cy} r={5} fill="#6366f1" stroke="#ffffff" strokeWidth={2} />
+      </g>
+    );
+  };
 
-  // Make SVG paths
-  let pathD = "";
-  let areaD = "";
-  if (points.length > 0) {
-    if (points.length === 1) {
-      const p = points[0];
-      pathD = `M ${paddingLeft} ${p.y} L ${width - paddingRight} ${p.y}`;
-      areaD = `M ${paddingLeft} ${p.y} L ${width - paddingRight} ${p.y} L ${width - paddingRight} ${height - paddingBottom} L ${paddingLeft} ${height - paddingBottom} Z`;
-    } else {
-      pathD = `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
-      areaD = pathD + ` L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/95 backdrop-blur-sm border border-gray-100 p-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)] text-xs min-w-[140px]">
+          <p className="text-gray-400 font-bold mb-1 tracking-wider uppercase text-[9px]">{label}</p>
+          <div className="flex items-center space-x-1.5 mt-1">
+            <span className="w-2 h-2 rounded-full bg-indigo-600 shadow-sm shadow-indigo-200"></span>
+            <p className="text-sm font-extrabold text-gray-800">
+              {symbol}{payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+      );
     }
-  }
-
-  const yGridLines = [0, 0.25, 0.5, 0.75, 1];
-  const labelInterval = Math.max(1, Math.ceil(revenueHistory.length / 8));
+    return null;
+  };
 
   return (
     <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Overview</h1>
-          <p className="text-gray-500 text-sm mt-1">Real-time statistics & business diagnostics</p>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("dashboard.overview_title")}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t("dashboard.overview_desc")}</p>
         </div>
       </div>
       
@@ -198,245 +207,94 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* Interactive Revenue Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      {/* Interactive Revenue Chart using Recharts */}
+      <div className="bg-gradient-to-br from-white to-gray-50/40 rounded-2xl border border-gray-100/90 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
           <div>
-            <h2 className="text-lg font-bold text-gray-800">Revenue Overview</h2>
-            <p className="text-gray-500 text-xs mt-0.5">Visualizing business cash inflow over time</p>
+            <h2 className="text-lg font-bold text-gray-800">{t("dashboard.revenue_overview")}</h2>
+            <p className="text-gray-500 text-xs mt-0.5">{t("dashboard.revenue_desc")}</p>
+            {revenueHistory.length > 0 && (
+              <div className="mt-2.5 flex items-baseline space-x-2">
+                <span className="text-3xl font-extrabold text-indigo-600 tracking-tight">
+                  {symbol}{periodTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-xs text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                  {t("dashboard.total_period")}
+                </span>
+              </div>
+            )}
           </div>
           
           {/* Day Filters */}
-          <div className="flex bg-gray-100 p-1 rounded-lg">
+          <div className="flex bg-gray-100/80 p-1 rounded-xl">
             {[1, 3, 7, 15, 30].map((d) => (
               <button
                 key={d}
                 onClick={() => handleDaysChange(d)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   days === d
-                    ? "bg-white text-gray-900 shadow-sm"
+                    ? "bg-white text-indigo-600 shadow-sm font-bold"
                     : "text-gray-500 hover:text-gray-900"
                 }`}
               >
-                {d === 1 ? "1 Day" : `${d} Days`}
+                {d === 1 ? `1 ${t("dashboard.day")}` : `${d} ${t("dashboard.days")}`}
               </button>
             ))}
           </div>
         </div>
 
-        {/* SVG Drawing Area */}
-        <div className="relative w-full overflow-hidden">
-          {/* Custom scoped styles for animations */}
-          <style>{`
-            @keyframes drawPath {
-              from {
-                stroke-dashoffset: 2000;
-              }
-              to {
-                stroke-dashoffset: 0;
-              }
-            }
-            @keyframes fadeIn {
-              from {
-                opacity: 0;
-              }
-              to {
-                opacity: 1;
-              }
-            }
-            .animate-chart-line {
-              stroke-dasharray: 2000;
-              stroke-dashoffset: 2000;
-              animation: drawPath 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-            }
-            .animate-chart-area {
-              animation: fadeIn 1s ease-out 0.8s forwards;
-            }
-            .animate-fade-in {
-              animation: fadeIn 0.6s ease-out forwards;
-            }
-            .chart-dot-group {
-              transition: transform 0.2s ease;
-            }
-            .chart-dot-group:hover {
-              transform: scale(1.3);
-            }
-            .chart-dot-pulse {
-              animation: pulseGlow 2s infinite;
-            }
-            @keyframes pulseGlow {
-              0% { r: 4; opacity: 0.8; }
-              50% { r: 8; opacity: 0.3; }
-              100% { r: 4; opacity: 0.8; }
-            }
-          `}</style>
-
+        <div className="w-full h-[320px]">
           {revenueHistory.length === 0 ? (
-            <div className="flex justify-center items-center h-[300px] border border-dashed border-gray-200 rounded-lg">
-              <span className="text-sm text-gray-400">No revenue data available for this range.</span>
+            <div className="flex justify-center items-center h-full border border-dashed border-gray-200 rounded-lg">
+              <span className="text-sm text-gray-400">{t("dashboard.no_revenue_data")}</span>
             </div>
           ) : (
-            <>
-              <svg 
-                viewBox={`0 0 ${width} ${height}`} 
-                className="w-full h-auto"
-                style={{ overflow: "visible" }}
-              >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueHistory} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
                 <defs>
-                  {/* Subtle modern area gradient fill */}
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                    <stop offset="50%" stopColor="#8b5cf6" stopOpacity={0.08} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.00} />
                   </linearGradient>
-
-                  {/* Drop-shadow glow effect for the line path */}
-                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#3b82f6" floodOpacity="0.25" />
-                  </filter>
+                  <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="50%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#3b82f6" />
+                  </linearGradient>
                 </defs>
-
-                {/* Y Grid Lines & Labels */}
-                {yGridLines.map((ratio, i) => {
-                  const gridY = height - paddingBottom - ratio * (height - paddingTop - paddingBottom);
-                  const val = ratio * maxAmount;
-                  return (
-                    <g key={i} className="animate-fade-in">
-                      <line 
-                        x1={paddingLeft} 
-                        y1={gridY} 
-                        x2={width - paddingRight} 
-                        y2={gridY} 
-                        stroke="#f3f4f6" 
-                        strokeWidth="1.2"
-                        strokeDasharray="4,4"
-                      />
-                      <text 
-                        x={paddingLeft - 12} 
-                        y={gridY + 4} 
-                        textAnchor="end" 
-                        className="text-[10px] fill-gray-400 font-bold font-sans"
-                      >
-                        {symbol}{val.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Area path with fade-in animation */}
-                {areaD && (
-                  <path 
-                    key={`area-${days}`}
-                    d={areaD} 
-                    fill="url(#chartGradient)" 
-                    className="animate-chart-area"
-                    style={{ opacity: 0 }}
-                  />
-                )}
-
-                {/* Line path with glow filter & left-to-right drawing animation */}
-                {pathD && (
-                  <path 
-                    key={`line-${days}`}
-                    d={pathD} 
-                    fill="none" 
-                    stroke="#3b82f6" 
-                    strokeWidth="3.5" 
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    filter="url(#glow)"
-                    className="animate-chart-line"
-                  />
-                )}
-
-                {/* X Axis Labels */}
-                {points.map((p, idx) => {
-                  if (idx % labelInterval !== 0 && idx !== points.length - 1) return null;
-                  return (
-                    <text 
-                      key={idx} 
-                      x={p.x} 
-                      y={height - paddingBottom + 20} 
-                      textAnchor="middle" 
-                      className="text-[10px] fill-gray-400 font-bold font-sans animate-fade-in"
-                    >
-                      {p.label}
-                    </text>
-                  );
-                })}
-
-                {/* Vertical Cursor Tracker Line (When Hovered) */}
-                {hoveredPoint && (
-                  <line 
-                    x1={hoveredPoint.x} 
-                    y1={paddingTop} 
-                    x2={hoveredPoint.x} 
-                    y2={height - paddingBottom} 
-                    stroke="#3b82f6" 
-                    strokeWidth="1.5" 
-                    strokeDasharray="4,3" 
-                    className="animate-fade-in"
-                  />
-                )}
-
-                {/* Interactive Hover Dots & Capturing Areas */}
-                {points.map((p, idx) => {
-                  const isHovered = hoveredPoint && hoveredPoint.date === p.date;
-                  return (
-                    <g key={idx}>
-                      {/* Invisible hovering sensor circle */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r="15"
-                        fill="transparent"
-                        className="cursor-pointer"
-                        onMouseEnter={() => setHoveredPoint(p)}
-                        onMouseLeave={() => setHoveredPoint(null)}
-                      />
-                      
-                      {/* Active dot glow ring */}
-                      {isHovered && (
-                        <circle
-                          cx={p.x}
-                          cy={p.y}
-                          r="9"
-                          fill="#3b82f6"
-                          fillOpacity="0.25"
-                          className="pointer-events-none animate-fade-in"
-                        />
-                      )}
-
-                      {/* Normal static dot */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={isHovered ? "6" : "4.5"}
-                        fill={isHovered ? "#3b82f6" : "#ffffff"}
-                        stroke="#3b82f6"
-                        strokeWidth={isHovered ? "2" : "2.5"}
-                        className="pointer-events-none transition-all duration-200"
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* Dynamic HTML Tooltip Overlay (Smooth Position Tracking) */}
-              {hoveredPoint && (
-                <div 
-                  className="absolute pointer-events-none bg-gray-900/95 text-white p-3 rounded-lg shadow-xl border border-gray-800 text-xs transition-all duration-150 z-10 animate-fade-in"
-                  style={{
-                    left: `${((hoveredPoint.x - paddingLeft) / (width - paddingLeft - paddingRight)) * 100}%`,
-                    top: `${hoveredPoint.y - 12}px`,
-                    transform: 'translate(-50%, -125%)',
-                    marginLeft: `${paddingLeft}px`,
-                  }}
-                >
-                  <p className="text-gray-400 font-bold mb-1 tracking-wide uppercase text-[9px]">{hoveredPoint.label}</p>
-                  <p className="text-sm font-extrabold text-blue-400">{symbol}{hoveredPoint.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                </div>
-              )}
-            </>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" opacity={0.6} />
+                <XAxis 
+                  dataKey="label" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 500 }} 
+                  dy={10} 
+                  minTickGap={20}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 500 }} 
+                  tickFormatter={(val) => `${symbol}${val >= 1000 ? (val/1000).toFixed(1)+'k' : val}`}
+                  dx={-10}
+                />
+                <Tooltip 
+                  cursor={{ stroke: '#d1d5db', strokeWidth: 1, strokeDasharray: '4 4' }} 
+                  content={<CustomTooltip />} 
+                />
+                <Area 
+                  type="monotone"
+                  dataKey="amount" 
+                  stroke="url(#lineGradient)" 
+                  strokeWidth={3}
+                  fill="url(#colorRevenue)"
+                  dot={false}
+                  activeDot={<CustomActiveDot />}
+                  animationDuration={1000}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>
@@ -446,7 +304,7 @@ export default function DashboardOverview() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center space-x-2.5 mb-4 text-red-600">
             <FaExclamationTriangle className="text-red-500 text-xl" />
-            <h2 className="text-lg font-bold text-gray-800">Low Stock & Reorder Alerts</h2>
+            <h2 className="text-lg font-bold text-gray-800">{t("dashboard.low_stock_alerts")}</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {stats.lowStockAlerts.map((alert, idx) => (
@@ -455,16 +313,16 @@ export default function DashboardOverview() {
                   <div className="flex justify-between items-start gap-2">
                     <h3 className="font-bold text-gray-800 text-sm truncate" title={alert.name}>{alert.name}</h3>
                     <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-extrabold uppercase shrink-0">
-                      Stock: {alert.stock}
+                      {t("dashboard.stock")}: {alert.stock}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-400 mt-1 font-mono">SKU: {alert.sku}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">Threshold Level: {alert.reorderLevel}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{t("dashboard.threshold")}: {alert.reorderLevel}</p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-red-100/50 flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-medium">Reorder Recommendation:</span>
+                  <span className="text-gray-500 font-medium">{t("dashboard.reorder_rec")}:</span>
                   <span className="font-extrabold text-red-700 bg-red-100/70 px-2 py-0.5 rounded">
-                    +{alert.suggestedReorder} Units
+                    +{alert.suggestedReorder} {t("dashboard.units")}
                   </span>
                 </div>
               </div>
@@ -475,10 +333,10 @@ export default function DashboardOverview() {
 
       {/* Recent Activities Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Activities</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">{t("dashboard.recent_activities")}</h2>
         <div className="space-y-4">
           {recentActivities.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4">No recent activities found.</p>
+            <p className="text-sm text-gray-500 py-4">{t("dashboard.no_activities")}</p>
           ) : (
             recentActivities.slice(0, 5).map((act, idx) => (
               <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">

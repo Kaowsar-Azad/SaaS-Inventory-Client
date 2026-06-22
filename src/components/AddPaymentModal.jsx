@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FaTimes, FaMoneyBillWave, FaCreditCard, FaUniversity, FaMobileAlt } from "react-icons/fa";
+import { useLanguage } from "../context/LanguageContext";
+import { FaTimes, FaMoneyBillWave, FaCreditCard, FaUniversity, FaMobileAlt, FaExclamationCircle } from "react-icons/fa";
+import { apiFetch } from "../lib/apiFetch";
 
 export default function AddPaymentModal({ 
   isOpen, 
@@ -13,6 +15,7 @@ export default function AddPaymentModal({
   recordId, 
   type 
 }) {
+  const { t } = useLanguage();
   const [payAmount, setPayAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [note, setNote] = useState("");
@@ -37,13 +40,13 @@ export default function AddPaymentModal({
 
     const amount = Number(payAmount);
     if (isNaN(amount) || amount <= 0) {
-      setErrorMsg("Please enter a valid positive payment amount.");
+      setErrorMsg(t("payment_modal.val_positive"));
       setLoading(false);
       return;
     }
 
     if (amount > dueAmount) {
-      setErrorMsg(`Payment amount cannot exceed the remaining due of $${dueAmount.toFixed(2)}.`);
+      setErrorMsg(t("payment_modal.val_exceed").replace("${due}", dueAmount.toFixed(2)));
       setLoading(false);
       return;
     }
@@ -54,7 +57,7 @@ export default function AddPaymentModal({
         ? `${apiUrl}/sales/${recordId}/payments` 
         : `${apiUrl}/purchases/${recordId}/payments`;
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,11 +75,11 @@ export default function AddPaymentModal({
         onSuccess(data);
         onClose();
       } else {
-        setErrorMsg(data.message || "Failed to record payment.");
+        setErrorMsg(data.message || t("payment_modal.val_failed"));
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg("An error occurred while connecting to the server.");
+      setErrorMsg(t("payment_modal.val_connect_error"));
     } finally {
       setLoading(false);
     }
@@ -93,13 +96,13 @@ export default function AddPaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in font-sans">
       <div className="bg-white rounded-3xl border border-gray-100 shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-100">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
           <h3 className="text-lg font-black text-gray-800 tracking-tight flex items-center gap-2">
-            💳 Record Due Payment
+            💳 {t("payment_modal.title")}
           </h3>
           <button 
             onClick={onClose} 
@@ -110,7 +113,7 @@ export default function AddPaymentModal({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 text-sm">
           {errorMsg && (
             <div className="bg-rose-50 border-l-4 border-rose-500 p-3 rounded-lg text-rose-800 text-xs font-bold flex items-center gap-2">
               <FaExclamationCircle className="text-rose-500 text-sm flex-shrink-0" />
@@ -121,15 +124,15 @@ export default function AddPaymentModal({
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-3 gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100/50 text-center">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{t("payment_modal.stat_total")}</span>
               <span className="text-sm font-extrabold text-gray-800">${totalAmount?.toFixed(2)}</span>
             </div>
             <div className="space-y-1 border-x border-gray-200/60">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Paid</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{t("payment_modal.stat_paid")}</span>
               <span className="text-sm font-extrabold text-emerald-600">${paidAmount?.toFixed(2)}</span>
             </div>
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Remaining</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{t("payment_modal.stat_remaining")}</span>
               <span className="text-sm font-extrabold text-rose-600">${dueAmount?.toFixed(2)}</span>
             </div>
           </div>
@@ -137,7 +140,7 @@ export default function AddPaymentModal({
           {/* Form Fields */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Amount to Pay ($)</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t("payment_modal.amount_to_pay")}</label>
               <input
                 type="number"
                 step="0.01"
@@ -146,19 +149,19 @@ export default function AddPaymentModal({
                 required
                 value={payAmount}
                 onChange={(e) => setPayAmount(e.target.value)}
-                placeholder="Enter payment amount"
+                placeholder={t("payment_modal.amount_placeholder")}
                 className="w-full border border-gray-300 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-sm font-bold transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Payment Method</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t("sales.payment_method")}</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: "cash", name: "Cash" },
-                  { id: "card", name: "Card" },
-                  { id: "bank", name: "Bank Transfer" },
-                  { id: "mfs", name: "Mobile Banking" }
+                  { id: "cash", name: t("payment_modal.cash") },
+                  { id: "card", name: t("payment_modal.card") },
+                  { id: "bank", name: t("payment_modal.bank") },
+                  { id: "mfs", name: t("payment_modal.mfs") }
                 ].map((method) => (
                   <button
                     key={method.id}
@@ -178,12 +181,12 @@ export default function AddPaymentModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notes (Optional)</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t("payment_modal.notes")}</label>
               <textarea
                 rows="2"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Add transaction note (e.g. Bank ref #)"
+                placeholder={t("payment_modal.notes_placeholder")}
                 className="w-full border border-gray-300 rounded-xl py-2.5 px-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-xs text-gray-600 transition-all resize-none"
               />
             </div>
@@ -197,14 +200,14 @@ export default function AddPaymentModal({
               disabled={loading}
               className="py-3 px-5 border border-gray-200 rounded-xl font-semibold text-sm hover:bg-gray-50 text-gray-600 transition-colors cursor-pointer"
             >
-              Cancel
+              {t("payment_modal.cancel")}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="py-3 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-extrabold rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
             >
-              {loading ? "Recording..." : "Record Payment"}
+              {loading ? t("payment_modal.submit_loading") : t("payment_modal.submit_btn")}
             </button>
           </div>
         </form>

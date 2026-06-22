@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "../../../context/LanguageContext";
 import AddPaymentModal from "../../../components/AddPaymentModal";
+import { apiFetch } from "../../../lib/apiFetch";
 
 export default function PurchasesPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [purchases, setPurchases] = useState([]);
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -29,9 +32,9 @@ export default function PurchasesPage() {
       const options = { credentials: "include" };
 
       const [purchasesRes, productsRes, suppliersRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/purchases`, options),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, options),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/suppliers`, options),
+        apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/purchases`, options),
+        apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, options),
+        apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/suppliers`, options),
       ]);
 
       if (purchasesRes.ok) setPurchases(await purchasesRes.json());
@@ -52,7 +55,7 @@ export default function PurchasesPage() {
   const handleAddPurchase = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/purchases`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/purchases`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,11 +70,11 @@ export default function PurchasesPage() {
         fetchData();
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to record purchase");
+        alert(errData.message || t("purchases.add_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("categories.something_wrong"));
     }
   };
 
@@ -81,63 +84,63 @@ export default function PurchasesPage() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="p-6 text-gray-500">{t("purchases.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Purchases</h1>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("purchases.title")}</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
         >
-          {showAddForm ? "Cancel" : "+ Record Purchase"}
+          {showAddForm ? t("purchases.cancel") : t("purchases.add_button")}
         </button>
       </div>
 
       {showAddForm && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl font-semibold mb-4">Record New Purchase</h2>
+          <h2 className="text-xl font-semibold mb-4">{t("purchases.add_title")}</h2>
           <form onSubmit={handleAddPurchase} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Supplier</label>
+              <label className="block text-sm font-medium text-gray-700">{t("purchases.supplier")}</label>
               <select required value={formData.supplierId} onChange={(e) => setFormData({...formData, supplierId: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                <option value="">Select Supplier</option>
+                <option value="">{t("purchases.choose_supplier")}</option>
                 {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Product</label>
+              <label className="block text-sm font-medium text-gray-700">{t("purchases.product")}</label>
               <select required value={formData.productId} onChange={(e) => setFormData({...formData, productId: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                <option value="">Select Product</option>
+                <option value="">{t("purchases.choose_product")}</option>
                 {products.map(p => <option key={p._id} value={p._id}>{p.name} ({p.sku})</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Quantity</label>
+              <label className="block text-sm font-medium text-gray-700">{t("purchases.qty")}</label>
               <input type="number" required min="1" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Unit Price</label>
+              <label className="block text-sm font-medium text-gray-700">{t("purchases.unit_price")}</label>
               <input type="number" required min="0" step="0.01" value={formData.unitPrice} onChange={(e) => setFormData({...formData, unitPrice: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Amount Paid (Optional)</label>
-              <input type="number" min="0" step="0.01" value={formData.amountPaid} onChange={(e) => setFormData({...formData, amountPaid: e.target.value})} placeholder="Leave blank for full payment" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <label className="block text-sm font-medium text-gray-700">{t("purchases.paid_optional")}</label>
+              <input type="number" min="0" step="0.01" value={formData.amountPaid} onChange={(e) => setFormData({...formData, amountPaid: e.target.value})} placeholder={t("purchases.leave_blank")} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Payment Method</label>
+              <label className="block text-sm font-medium text-gray-700">{t("purchases.payment_method")}</label>
               <select value={formData.paymentMethod} onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank">Bank Transfer</option>
-                <option value="mfs">Mobile Banking</option>
+                <option value="cash">{t("pos.cash")}</option>
+                <option value="card">{t("pos.card")}</option>
+                <option value="bank">{t("pos.bank")}</option>
+                <option value="mfs">{t("pos.mobile")}</option>
               </select>
             </div>
             <div className="md:col-span-2 pt-2">
               <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm cursor-pointer">
-                Save Purchase
+                {t("purchases.save_btn")}
               </button>
             </div>
           </form>
@@ -148,22 +151,22 @@ export default function PurchasesPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_date")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_supplier")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_product")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_qty")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_total")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_paid")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_due")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_status")}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_actions")}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {purchases.length === 0 ? (
               <tr>
                 <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
-                  No purchases found.
+                  {t("purchases.no_data")}
                 </td>
               </tr>
             ) : (
@@ -190,7 +193,7 @@ export default function PurchasesPage() {
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
                     }`}>
-                      {purchase.paymentStatus || "paid"}
+                      {purchase.paymentStatus === "paid" ? t("billing.active") : purchase.paymentStatus === "partial" ? t("pos.due") : t("purchases.table_due")}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -199,7 +202,7 @@ export default function PurchasesPage() {
                         onClick={() => handleOpenPaymentModal(purchase)}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded transition-all cursor-pointer shadow-sm"
                       >
-                        Add Payment
+                        {t("purchases.add_payment")}
                       </button>
                     )}
                   </td>

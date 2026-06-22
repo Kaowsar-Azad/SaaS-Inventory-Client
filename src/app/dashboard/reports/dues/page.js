@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useLanguage } from "../../../../context/LanguageContext";
 import { 
   FaUsers, 
   FaTruck, 
@@ -12,8 +13,10 @@ import {
 } from "react-icons/fa";
 import AddPaymentModal from "../../../../components/AddPaymentModal";
 import * as XLSX from "xlsx";
+import { apiFetch } from "../../../../lib/apiFetch";
 
 export default function DuesReportPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState({
     totalCustomerDue: 0,
     totalSupplierDue: 0,
@@ -36,7 +39,7 @@ export default function DuesReportPage() {
   const fetchDues = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/dues-summary`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/dues-summary`, {
         credentials: "include"
       });
       if (res.ok) {
@@ -44,11 +47,11 @@ export default function DuesReportPage() {
         setData(result);
       } else {
         const errData = await res.json();
-        setError(errData.message || "Failed to load dues report data.");
+        setError(errData.message || t("dues.fetch_failed"));
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while fetching dues report.");
+      setError(t("dues.fetch_err_occurred"));
     } finally {
       setLoading(false);
     }
@@ -114,7 +117,7 @@ export default function DuesReportPage() {
       }
 
       if (excelData.length === 0) {
-        alert("No due records available to export.");
+        alert(t("dues.export_no_data"));
         return;
       }
 
@@ -124,7 +127,7 @@ export default function DuesReportPage() {
       XLSX.writeFile(workbook, `${filename}_${new Date().getTime()}.xlsx`);
     } catch (err) {
       console.error(err);
-      alert("Failed to export Excel report.");
+      alert(t("dues.export_excel_failed"));
     }
   };
 
@@ -188,7 +191,7 @@ export default function DuesReportPage() {
       }
 
       if (tableRows.length === 0) {
-        alert("No due records available to export.");
+        alert(t("dues.export_no_data"));
         return;
       }
 
@@ -214,7 +217,7 @@ export default function DuesReportPage() {
       doc.save(`${filename}_${new Date().getTime()}.pdf`);
     } catch (err) {
       console.error(err);
-      alert("Failed to export PDF report.");
+      alert(t("dues.export_pdf_failed"));
     }
   };
 
@@ -223,7 +226,7 @@ export default function DuesReportPage() {
       <div className="flex h-96 items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-gray-500">Loading Dues Report...</p>
+          <p className="text-sm text-gray-500">{t("dues.loading")}</p>
         </div>
       </div>
     );
@@ -249,8 +252,8 @@ export default function DuesReportPage() {
   return (
     <div className="space-y-6 font-sans">
       <div>
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Dues Tracking & Reports</h1>
-        <p className="text-gray-500 text-sm mt-1">Track outstanding customer receivables and supplier payables with installment logging.</p>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("dues.title")}</h1>
+        <p className="text-gray-500 text-sm mt-1">{t("dues.desc")}</p>
       </div>
 
       {/* Summary Cards */}
@@ -259,7 +262,7 @@ export default function DuesReportPage() {
         <div className="bg-gradient-to-br from-rose-500 to-red-600 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between transition-transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-rose-100 text-xs font-semibold uppercase tracking-wider">Customer Receivables</p>
+              <p className="text-rose-100 text-xs font-semibold uppercase tracking-wider">{t("dues.customer_receivables")}</p>
               <h3 className="text-3xl font-black mt-2">${data.totalCustomerDue.toFixed(2)}</h3>
             </div>
             <div className="bg-white/20 p-3 rounded-xl">
@@ -267,7 +270,7 @@ export default function DuesReportPage() {
             </div>
           </div>
           <p className="text-rose-100 text-xs mt-6">
-            Total unpaid customer balances across {data.salesWithDues.length} pending sale transactions.
+            {t("dues.total_unpaid_sales").replace("{count}", data.salesWithDues.length)}
           </p>
         </div>
 
@@ -275,7 +278,7 @@ export default function DuesReportPage() {
         <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between transition-transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider">Supplier Payables</p>
+              <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider">{t("dues.supplier_payables")}</p>
               <h3 className="text-3xl font-black mt-2">${data.totalSupplierDue.toFixed(2)}</h3>
             </div>
             <div className="bg-white/20 p-3 rounded-xl">
@@ -283,7 +286,7 @@ export default function DuesReportPage() {
             </div>
           </div>
           <p className="text-blue-100 text-xs mt-6">
-            Total outstanding payments owed to suppliers across {data.purchasesWithDues.length} purchase orders.
+            {t("dues.total_unpaid_purchases").replace("{count}", data.purchasesWithDues.length)}
           </p>
         </div>
 
@@ -291,7 +294,7 @@ export default function DuesReportPage() {
         <div className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between transition-transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-teal-100 text-xs font-semibold uppercase tracking-wider">Net Receivables Balance</p>
+              <p className="text-teal-100 text-xs font-semibold uppercase tracking-wider">{t("dues.net_balance")}</p>
               <h3 className="text-3xl font-black mt-2">${netDues.toFixed(2)}</h3>
             </div>
             <div className="bg-white/20 p-3 rounded-xl">
@@ -299,7 +302,7 @@ export default function DuesReportPage() {
             </div>
           </div>
           <p className="text-teal-100 text-xs mt-6">
-            Net flow (Receivables minus Payables). A positive number indicates net incoming funds.
+            {t("dues.net_balance_desc")}
           </p>
         </div>
       </div>
@@ -314,7 +317,7 @@ export default function DuesReportPage() {
               : "text-gray-500 hover:bg-gray-50"
           }`}
         >
-          <FaUsers /> Customer Receivables ({data.customerDues.length})
+          <FaUsers /> {t("dues.cust_tab").replace("{count}", data.customerDues.length)}
         </button>
         <button
           onClick={() => setActiveTab("suppliers")}
@@ -324,7 +327,7 @@ export default function DuesReportPage() {
               : "text-gray-500 hover:bg-gray-50"
           }`}
         >
-          <FaTruck /> Supplier Payables ({data.supplierDues.length})
+          <FaTruck /> {t("dues.supp_tab").replace("{count}", data.supplierDues.length)}
         </button>
       </div>
 
@@ -335,21 +338,21 @@ export default function DuesReportPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Receivables Summary by Customer</h2>
-                <p className="text-xs text-gray-500 mt-1">Aggregated outstanding dues grouped by client accounts.</p>
+                <h2 className="text-xl font-bold text-gray-800">{t("dues.receivables_summary")}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t("dues.receivables_summary_desc")}</p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => downloadExcelReport("customers-summary")}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFileExcel /> Export Excel
+                  <FaFileExcel /> {t("dues.export_excel")}
                 </button>
                 <button
                   onClick={() => downloadPDFReport("customers-summary")}
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFilePdf /> Export PDF
+                  <FaFilePdf /> {t("dues.export_pdf")}
                 </button>
               </div>
             </div>
@@ -358,18 +361,18 @@ export default function DuesReportPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Contact Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email Address</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unpaid Invoices</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total Outstanding</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.cust_name")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.contact_phone")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.email")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.unpaid_invoices")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.total_outstanding")}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {data.customerDues.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                        No outstanding customer dues found.
+                        {t("dues.no_customer_dues")}
                       </td>
                     </tr>
                   ) : (
@@ -392,21 +395,21 @@ export default function DuesReportPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Detailed Unpaid Sales Invoices</h2>
-                <p className="text-xs text-gray-500 mt-1">Individual sales records containing unpaid balance breakdowns.</p>
+                <h2 className="text-xl font-bold text-gray-800">{t("dues.detailed_unpaid_sales")}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t("dues.detailed_unpaid_sales_desc")}</p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => downloadExcelReport("customers-detailed")}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFileExcel /> Export Excel
+                  <FaFileExcel /> {t("dues.export_excel")}
                 </button>
                 <button
                   onClick={() => downloadPDFReport("customers-detailed")}
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFilePdf /> Export PDF
+                  <FaFilePdf /> {t("dues.export_pdf")}
                 </button>
               </div>
             </div>
@@ -415,22 +418,22 @@ export default function DuesReportPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Grand Total</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Paid</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Due</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.date")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.customer")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.product")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.qty")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.grand_total")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.paid")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.due")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.status")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {data.salesWithDues.length === 0 ? (
                     <tr>
                       <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
-                        No outstanding invoices found.
+                        {t("dues.no_sales_found")}
                       </td>
                     </tr>
                   ) : (
@@ -461,7 +464,7 @@ export default function DuesReportPage() {
                               onClick={() => handleOpenPaymentModal(sale, "sale")}
                               className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                             >
-                              Add Payment <FaArrowRight className="text-[10px]" />
+                              {t("dues.add_payment")} <FaArrowRight className="text-[10px]" />
                             </button>
                           </td>
                         </tr>
@@ -479,21 +482,21 @@ export default function DuesReportPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Payables Summary by Supplier</h2>
-                <p className="text-xs text-gray-500 mt-1">Aggregated outstanding dues owed to supplier accounts.</p>
+                <h2 className="text-xl font-bold text-gray-800">{t("dues.payables_summary")}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t("dues.payables_summary_desc")}</p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => downloadExcelReport("suppliers-summary")}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFileExcel /> Export Excel
+                  <FaFileExcel /> {t("dues.export_excel")}
                 </button>
                 <button
                   onClick={() => downloadPDFReport("suppliers-summary")}
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFilePdf /> Export PDF
+                  <FaFilePdf /> {t("dues.export_pdf")}
                 </button>
               </div>
             </div>
@@ -502,18 +505,18 @@ export default function DuesReportPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Contact Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email Address</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unpaid Purchases</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total Outstanding</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.supp_name")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.contact_phone")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.email")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.unpaid_purchases")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.total_outstanding")}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {data.supplierDues.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                        No outstanding supplier payables found.
+                        {t("dues.no_supplier_dues")}
                       </td>
                     </tr>
                   ) : (
@@ -536,21 +539,21 @@ export default function DuesReportPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Detailed Unpaid Restocking Orders</h2>
-                <p className="text-xs text-gray-500 mt-1">Individual purchase orders containing unpaid balance details.</p>
+                <h2 className="text-xl font-bold text-gray-800">{t("dues.detailed_unpaid_purchases")}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t("dues.detailed_unpaid_purchases_desc")}</p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => downloadExcelReport("suppliers-detailed")}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFileExcel /> Export Excel
+                  <FaFileExcel /> {t("dues.export_excel")}
                 </button>
                 <button
                   onClick={() => downloadPDFReport("suppliers-detailed")}
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <FaFilePdf /> Export PDF
+                  <FaFilePdf /> {t("dues.export_pdf")}
                 </button>
               </div>
             </div>
@@ -559,22 +562,22 @@ export default function DuesReportPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Grand Total</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Paid</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Due</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.date")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.supplier")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.product")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.qty")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.grand_total")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.paid")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.due")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.status")}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {data.purchasesWithDues.length === 0 ? (
                     <tr>
                       <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
-                        No outstanding supplier orders found.
+                        {t("dues.no_purchases_found")}
                       </td>
                     </tr>
                   ) : (
@@ -603,7 +606,7 @@ export default function DuesReportPage() {
                             onClick={() => handleOpenPaymentModal(purchase, "purchase")}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                           >
-                            Add Payment <FaArrowRight className="text-[10px]" />
+                            {t("dues.add_payment")} <FaArrowRight className="text-[10px]" />
                           </button>
                         </td>
                       </tr>

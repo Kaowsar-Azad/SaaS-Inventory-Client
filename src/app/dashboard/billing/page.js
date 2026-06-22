@@ -15,11 +15,14 @@ import {
   FaCalendarCheck, 
   FaClock 
 } from "react-icons/fa";
+import { useLanguage } from "../../../context/LanguageContext";
+import { apiFetch } from "../../../lib/apiFetch";
 
 export default function BillingPage(props) {
   const searchParams = use(props.searchParams);
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const { t } = useLanguage();
   const [company, setCompany] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +33,7 @@ export default function BillingPage(props) {
   const fetchCompanyDetails = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${apiUrl}/company/settings`, {
+      const res = await apiFetch(`${apiUrl}/company/settings`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -47,7 +50,7 @@ export default function BillingPage(props) {
   const fetchBillingHistory = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${apiUrl}/payments/history`, {
+      const res = await apiFetch(`${apiUrl}/payments/history`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -78,7 +81,7 @@ export default function BillingPage(props) {
     if (status === "success") {
       setNotification({
         type: "success",
-        message: "🎉 Payment successful! Your subscription has been activated.",
+        message: "🎉 " + (t("billing.payment_success") || "Payment successful! Your subscription has been activated."),
       });
       router.replace("/dashboard/billing");
       timer = setTimeout(() => {
@@ -87,7 +90,7 @@ export default function BillingPage(props) {
     } else if (status === "cancel") {
       setNotification({
         type: "error",
-        message: "❌ Payment cancelled. Please try again.",
+        message: "❌ " + (t("billing.payment_cancelled") || "Payment cancelled. Please try again."),
       });
       router.replace("/dashboard/billing");
       timer = setTimeout(() => {
@@ -103,7 +106,7 @@ export default function BillingPage(props) {
     setActionLoading(plan);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${apiUrl}/payments/create-checkout-session`, {
+      const res = await apiFetch(`${apiUrl}/payments/create-checkout-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +121,7 @@ export default function BillingPage(props) {
       } else {
         setNotification({
           type: "error",
-          message: data.message || "Failed to create checkout session.",
+          message: data.message || t("billing.something_wrong") || "Failed to create checkout session.",
         });
         setActionLoading(null);
       }
@@ -126,7 +129,7 @@ export default function BillingPage(props) {
       console.error(err);
       setNotification({
         type: "error",
-        message: "Failed to connect to the server. Please try again.",
+        message: t("billing.something_wrong") || "Failed to connect to the server. Please try again.",
       });
       setActionLoading(null);
     }
@@ -143,7 +146,7 @@ export default function BillingPage(props) {
   // Calculate subscription remaining percentage for visual progress
   const getDaysRemainingInfo = () => {
     if (!company?.subscriptionExpiresAt || company.subscriptionPlan === "free") {
-      return { percentage: 100, text: "Unlimited access", daysLeft: Infinity };
+      return { percentage: 100, text: t("billing.unlimited_access"), daysLeft: Infinity };
     }
     const expires = new Date(company.subscriptionExpiresAt);
     const now = new Date();
@@ -155,7 +158,7 @@ export default function BillingPage(props) {
 
     return {
       percentage,
-      text: `${diffDays} days remaining`,
+      text: t("billing.days_remaining").replace("{days}", diffDays),
       daysLeft: diffDays
     };
   };
@@ -169,9 +172,9 @@ export default function BillingPage(props) {
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
             <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl shadow-inner"><FaFileInvoiceDollar className="w-7 h-7" /></span>
-            Billing & Subscriptions
+            {t("billing.title")}
           </h1>
-          <p className="text-gray-500 text-sm mt-1.5 ml-1">Manage your SaaS billing details, transactions, and active plans.</p>
+          <p className="text-gray-500 text-sm mt-1.5 ml-1">{t("billing.desc_details")}</p>
         </div>
       </div>
 
@@ -202,34 +205,34 @@ export default function BillingPage(props) {
                   : "bg-rose-50 text-rose-700 border-rose-200"
               }`}>
                 <span className={`w-2 h-2 rounded-full ${company?.status === "active" ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
-                {company?.status || "active"}
+                {company?.status === "active" ? t("billing.active") : company?.status === "canceled" ? t("billing.canceled") : company?.status || "active"}
               </span>
-              <span className="text-xs font-bold text-gray-400">CURRENT PLAN</span>
+              <span className="text-xs font-bold text-gray-400">{t("billing.current_plan_caps")}</span>
             </div>
             
             <h2 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-              {company?.subscriptionPlan === "free" ? "Free Access Plan" : 
-               company?.subscriptionPlan === "monthly" ? "Premium Monthly Plan" : "Enterprise Yearly Plan"}
+              {company?.subscriptionPlan === "free" ? t("billing.free_plan") : 
+               company?.subscriptionPlan === "monthly" ? t("billing.monthly_plan") : t("billing.yearly_plan")}
               {company?.subscriptionPlan !== "free" && <FaCrown className="text-amber-500 text-3xl animate-pulse" />}
             </h2>
             <p className="text-gray-500 text-sm max-w-lg leading-relaxed">
-              Your company has full access to the SaaS Inventory features. Keep your plan active to prevent automated data locking.
+              {t("billing.plan_desc")}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-50">
             <div className="space-y-1">
-              <span className="text-xs font-bold text-gray-400 flex items-center gap-1.5"><FaCalendarCheck className="text-indigo-500" /> EXPIRATION</span>
+              <span className="text-xs font-bold text-gray-400 flex items-center gap-1.5"><FaCalendarCheck className="text-indigo-500" /> {t("billing.expiration")}</span>
               <span className="text-sm font-extrabold text-gray-800">
                 {company?.subscriptionExpiresAt 
                   ? new Date(company.subscriptionExpiresAt).toLocaleDateString(undefined, { dateStyle: "long" })
-                  : "Lifetime (Forever)"}
+                  : t("billing.lifetime")}
               </span>
             </div>
             <div className="space-y-1">
-              <span className="text-xs font-bold text-gray-400 flex items-center gap-1.5"><FaClock className="text-indigo-500" /> RENEWAL TYPE</span>
+              <span className="text-xs font-bold text-gray-400 flex items-center gap-1.5"><FaClock className="text-indigo-500" /> {t("billing.renewal_type")}</span>
               <span className="text-sm font-extrabold text-gray-800">
-                {company?.subscriptionPlan === "free" ? "No Renewal" : company?.subscriptionPlan === "monthly" ? "Auto Monthly Billing" : "Auto Yearly Billing"}
+                {company?.subscriptionPlan === "free" ? t("billing.no_renewal") : company?.subscriptionPlan === "monthly" ? t("billing.auto_monthly") : t("billing.auto_yearly")}
               </span>
             </div>
           </div>
@@ -239,7 +242,7 @@ export default function BillingPage(props) {
         <div className="w-full lg:w-96 bg-gray-50/50 border border-gray-100 rounded-2xl p-6 flex flex-col justify-between space-y-6">
           <div className="space-y-2">
             <div className="flex justify-between items-center text-xs font-bold text-gray-500">
-              <span>USAGE PERIOD PROGRESS</span>
+              <span>{t("billing.usage_progress")}</span>
               <span className="text-indigo-600 font-extrabold">{subInfo.text}</span>
             </div>
             <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
@@ -255,9 +258,9 @@ export default function BillingPage(props) {
           <div className="bg-white border border-gray-100 rounded-xl p-4 flex gap-3.5 items-start">
             <FaInfoCircle className="text-indigo-500 text-lg flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="text-xs font-extrabold text-gray-800">Need to update invoices?</h4>
+              <h4 className="text-xs font-extrabold text-gray-800">{t("billing.invoice_update_title")}</h4>
               <p className="text-gray-400 text-[11px] leading-relaxed">
-                Stripe handles all invoice delivery. Success payments are logged inside our transaction list below.
+                {t("billing.invoice_update_desc")}
               </p>
             </div>
           </div>
@@ -267,8 +270,8 @@ export default function BillingPage(props) {
       {/* Beautiful SaaS Pricing Plans */}
       <div className="space-y-6">
         <div className="text-center md:text-left">
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Select Premium Subscription</h2>
-          <p className="text-gray-500 text-sm mt-1">Upgrade your business workspace to unlock professional features.</p>
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">{t("billing.select_premium")}</h2>
+          <p className="text-gray-500 text-sm mt-1">{t("billing.select_premium_desc")}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
@@ -280,31 +283,31 @@ export default function BillingPage(props) {
           }`}>
             {company?.subscriptionPlan === "monthly" && (
               <span className="absolute top-0 right-0 bg-indigo-600 text-white px-4 py-1.5 rounded-bl-2xl text-[10px] font-extrabold uppercase tracking-wider">
-                CURRENT PLAN
+                {t("billing.current_plan_caps")}
               </span>
             )}
             
             <div className="space-y-6">
               <div>
-                <h3 className="text-2xl font-black text-gray-900">Monthly Plan</h3>
-                <p className="text-gray-400 text-xs mt-1.5">Affordable monthly commitment to run operations.</p>
+                <h3 className="text-2xl font-black text-gray-900">{t("billing.monthly_plan_title")}</h3>
+                <p className="text-gray-400 text-xs mt-1.5">{t("billing.monthly_plan_desc")}</p>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-5xl font-black text-gray-900 tracking-tight">$10</span>
-                <span className="text-gray-400 text-sm font-semibold">/ month</span>
+                <span className="text-gray-400 text-sm font-semibold">/ {t("billing.monthly").toLowerCase()}</span>
               </div>
               <ul className="space-y-3.5 text-sm text-gray-600 pt-4 border-t border-gray-50">
                 <li className="flex items-center gap-3">
                   <FaCheckCircle className="text-emerald-500 text-lg flex-shrink-0" />
-                  <span className="font-medium">Unlimited Inventory Products</span>
+                  <span className="font-medium">{t("billing.unlimited_products")}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <FaCheckCircle className="text-emerald-500 text-lg flex-shrink-0" />
-                  <span className="font-medium">WhatsApp Notification Alerts</span>
+                  <span className="font-medium">{t("billing.whatsapp_alerts")}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <FaCheckCircle className="text-emerald-500 text-lg flex-shrink-0" />
-                  <span className="font-medium">Automatic Mail Invoices & Backups</span>
+                  <span className="font-medium">{t("billing.auto_mail_backups")}</span>
                 </li>
               </ul>
             </div>
@@ -319,7 +322,7 @@ export default function BillingPage(props) {
                     : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 active:scale-95 disabled:bg-indigo-400"
                 }`}
               >
-                {actionLoading === "monthly" ? "Connecting to Stripe..." : company?.subscriptionPlan === "monthly" ? "Active" : "Subscribe Monthly"}
+                {actionLoading === "monthly" ? t("billing.connecting_stripe") : company?.subscriptionPlan === "monthly" ? t("billing.active_label") : t("billing.subscribe_monthly")}
                 {company?.subscriptionPlan !== "monthly" && actionLoading !== "monthly" && <FaArrowRight className="w-3.5 h-3.5" />}
               </button>
             </div>
@@ -333,7 +336,7 @@ export default function BillingPage(props) {
           }`}>
             {company?.subscriptionPlan === "yearly" && (
               <span className="absolute top-0 right-0 bg-amber-500 text-gray-950 px-4 py-1.5 rounded-bl-2xl text-[10px] font-extrabold uppercase tracking-wider">
-                CURRENT PLAN
+                {t("billing.current_plan_caps")}
               </span>
             )}
             
@@ -343,29 +346,29 @@ export default function BillingPage(props) {
             <div className="space-y-6 relative z-10">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-2xl font-black">Yearly Plan</h3>
-                  <p className="text-gray-500 text-xs mt-1.5">Complete yearly savings with continuous access.</p>
+                  <h3 className="text-2xl font-black">{t("billing.yearly_plan_title")}</h3>
+                  <p className="text-gray-500 text-xs mt-1.5">{t("billing.yearly_plan_desc")}</p>
                 </div>
                 <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-gray-950 font-black text-[9px] px-2.5 py-1.5 rounded-lg uppercase tracking-wider shadow-md">
-                  Save 17% (2 Months Free)
+                  {t("billing.save_percent")}
                 </span>
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-5xl font-black text-white tracking-tight">$100</span>
-                <span className="text-gray-500 text-sm font-semibold">/ year</span>
+                <span className="text-gray-500 text-sm font-semibold">/ {t("billing.yearly").toLowerCase()}</span>
               </div>
               <ul className="space-y-3.5 text-sm text-gray-300 pt-4 border-t border-gray-800">
                 <li className="flex items-center gap-3">
                   <FaCheckCircle className="text-amber-400 text-lg flex-shrink-0" />
-                  <span className="font-medium">All Monthly Plan features included</span>
+                  <span className="font-medium">{t("billing.monthly_features_included")}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <FaCheckCircle className="text-amber-400 text-lg flex-shrink-0" />
-                  <span className="font-medium">Get 2 months free ($20 savings)</span>
+                  <span className="font-medium">{t("billing.two_months_free")}</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <FaCheckCircle className="text-amber-400 text-lg flex-shrink-0" />
-                  <span className="font-medium">Priority developer support status</span>
+                  <span className="font-medium">{t("billing.priority_support")}</span>
                 </li>
               </ul>
             </div>
@@ -380,7 +383,7 @@ export default function BillingPage(props) {
                     : "bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white shadow-lg shadow-indigo-500/20 active:scale-95 disabled:from-indigo-400 disabled:to-blue-400"
                 }`}
               >
-                {actionLoading === "yearly" ? "Connecting to Stripe..." : company?.subscriptionPlan === "yearly" ? "Active" : "Subscribe Yearly"}
+                {actionLoading === "yearly" ? t("billing.connecting_stripe") : company?.subscriptionPlan === "yearly" ? t("billing.active_label") : t("billing.subscribe_yearly")}
                 {company?.subscriptionPlan !== "yearly" && actionLoading !== "yearly" && <FaCrown className="w-3.5 h-3.5" />}
               </button>
             </div>
@@ -391,7 +394,7 @@ export default function BillingPage(props) {
       {/* Transaction History Section */}
       <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 md:p-8 space-y-6">
         <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-          <FaHistory className="text-indigo-600" /> Billing & Payment History
+          <FaHistory className="text-indigo-600" /> {t("billing.history_title")}
         </h2>
 
         {historyLoading ? (
@@ -400,18 +403,18 @@ export default function BillingPage(props) {
           </div>
         ) : history.length === 0 ? (
           <div className="text-center py-10 text-gray-400 text-sm space-y-1.5">
-            <span>📭 No transaction logs found for this account.</span>
+            <span>📭 {t("billing.no_transactions")}</span>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-gray-50">
             <table className="min-w-full divide-y divide-gray-100 text-sm text-left">
               <thead>
                 <tr className="bg-gray-50/50 text-gray-400 font-extrabold uppercase text-[11px] tracking-wide">
-                  <th className="py-4 px-5">DATE</th>
-                  <th className="py-4 px-5">INVOICE NUMBER</th>
-                  <th className="py-4 px-5">PLAN TYPE</th>
-                  <th className="py-4 px-5">AMOUNT PAID</th>
-                  <th className="py-4 px-5">PAYMENT STATUS</th>
+                  <th className="py-4 px-5">{t("billing.th_date")}</th>
+                  <th className="py-4 px-5">{t("billing.th_invoice")}</th>
+                  <th className="py-4 px-5">{t("billing.th_plan")}</th>
+                  <th className="py-4 px-5">{t("billing.th_amount")}</th>
+                  <th className="py-4 px-5">{t("billing.th_status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -425,7 +428,7 @@ export default function BillingPage(props) {
                     </td>
                     <td className="py-4 px-5">
                       <span className="font-extrabold text-[10px] uppercase bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md border border-gray-200/50 tracking-wide">
-                        {item.plan}
+                        {item.plan === "monthly" ? t("billing.monthly") : item.plan === "yearly" ? t("billing.yearly") : item.plan}
                       </span>
                     </td>
                     <td className="py-4 px-5 font-black text-gray-900 text-sm">
@@ -442,7 +445,7 @@ export default function BillingPage(props) {
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           item.status === "success" ? "bg-emerald-500" : item.status === "pending" ? "bg-amber-500 animate-pulse" : "bg-rose-500"
                         }`}></span>
-                        {item.status.toUpperCase()}
+                        {item.status === "success" ? t("billing.active") : item.status === "pending" ? t("pos.due") : item.status.toUpperCase()}
                       </span>
                     </td>
                   </tr>

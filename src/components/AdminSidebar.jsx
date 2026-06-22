@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FaChartLine, FaBuilding } from "react-icons/fa";
+import { FaChartLine, FaBuilding, FaDatabase } from "react-icons/fa";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const links = [
-    { name: "Overview", href: "/admin/dashboard", icon: FaChartLine },
-    { name: "Companies", href: "/admin/dashboard/companies", icon: FaBuilding },
+    { name: t("menu.overview"), href: "/admin/dashboard", icon: FaChartLine },
+    { name: t("menu.companies"), href: "/admin/dashboard/companies", icon: FaBuilding },
+    { name: t("menu.backups"), href: "/admin/dashboard/backups", icon: FaDatabase },
   ];
 
   return (

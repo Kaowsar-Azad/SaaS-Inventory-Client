@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authClient } from "../lib/auth-client";
+import { useLanguage } from "../context/LanguageContext";
 import { 
   FaChartBar, 
   FaBox, 
@@ -30,27 +31,29 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
 
+  const { t } = useLanguage();
+
   const links = [
-    { name: "Dashboard", href: "/dashboard", icon: FaChartBar },
-    { name: "Products", href: "/dashboard/products", icon: FaBox },
-    { name: "Categories", href: "/dashboard/categories", icon: FaTag },
-    { name: "Brands", href: "/dashboard/brands", icon: FaStar },
-    { name: "Warehouses", href: "/dashboard/warehouses", icon: FaWarehouse },
-    { name: "Stock Adjustments", href: "/dashboard/adjustments", icon: FaWrench },
-    { name: "Damaged Items", href: "/dashboard/damages", icon: FaTrashAlt },
-    { name: "Suppliers", href: "/dashboard/suppliers", icon: FaTruck },
-    { name: "Customers", href: "/dashboard/customers", icon: FaUsers },
-    { name: "Purchases", href: "/dashboard/purchases", icon: FaShoppingCart },
-    { name: "Sales", href: "/dashboard/sales", icon: FaChartLine },
-    { name: "POS Screen", href: "/dashboard/pos", icon: FaCashRegister },
-    { name: "Returns Management", href: "/dashboard/returns", icon: FaUndo },
-    { name: "Staff Users", href: "/dashboard/users", icon: FaUserTie },
-    { name: "Activity Logs", href: "/dashboard/activities", icon: FaClipboardList },
-    { name: "Reports", href: "/dashboard/reports", icon: FaFileAlt },
-    { name: "Dues Report", href: "/dashboard/reports/dues", icon: FaHandHoldingUsd },
-    { name: "Financial Reports", href: "/dashboard/reports/financial", icon: FaMoneyBillWave },
-    { name: "Billing & Subscription", href: "/dashboard/billing", icon: FaCreditCard },
-    { name: "Settings", href: "/dashboard/settings", icon: FaCog },
+    { name: t("menu.dashboard"), href: "/dashboard", icon: FaChartBar },
+    { name: t("menu.products"), href: "/dashboard/products", icon: FaBox },
+    { name: t("menu.categories"), href: "/dashboard/categories", icon: FaTag },
+    { name: t("menu.brands"), href: "/dashboard/brands", icon: FaStar },
+    { name: t("menu.warehouses"), href: "/dashboard/warehouses", icon: FaWarehouse },
+    { name: t("menu.inventory_adjustments"), href: "/dashboard/adjustments", icon: FaWrench },
+    { name: t("menu.damaged_items"), href: "/dashboard/damages", icon: FaTrashAlt },
+    { name: t("menu.suppliers"), href: "/dashboard/suppliers", icon: FaTruck },
+    { name: t("menu.customers"), href: "/dashboard/customers", icon: FaUsers },
+    { name: t("menu.purchases"), href: "/dashboard/purchases", icon: FaShoppingCart },
+    { name: t("menu.sales"), href: "/dashboard/sales", icon: FaChartLine },
+    { name: t("menu.pos"), href: "/dashboard/pos", icon: FaCashRegister },
+    { name: t("menu.returns"), href: "/dashboard/returns", icon: FaUndo },
+    { name: t("menu.users"), href: "/dashboard/users", icon: FaUserTie },
+    { name: t("menu.activity_logs"), href: "/dashboard/activities", icon: FaClipboardList },
+    { name: t("menu.reports"), href: "/dashboard/reports", icon: FaFileAlt },
+    { name: t("menu.dues_report"), href: "/dashboard/reports/dues", icon: FaHandHoldingUsd },
+    { name: t("menu.financial_reports"), href: "/dashboard/reports/financial", icon: FaMoneyBillWave },
+    { name: t("menu.billing"), href: "/dashboard/billing", icon: FaCreditCard },
+    { name: t("menu.settings"), href: "/dashboard/settings", icon: FaCog },
   ];
 
   const hasPermission = (link) => {

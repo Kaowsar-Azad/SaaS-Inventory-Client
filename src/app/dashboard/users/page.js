@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
+import { useLanguage } from "../../../context/LanguageContext";
+import { apiFetch } from "../../../lib/apiFetch";
 
 export default function UsersPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,15 +32,15 @@ export default function UsersPage() {
   const { data: session, isPending } = authClient.useSession();
 
   const modules = [
-    { key: "products", label: "Product Management (পণ্য)" },
-    { key: "warehouses", label: "Warehouse Management (ওয়্যারহাউস)" },
-    { key: "adjustments", label: "Inventory Adjustments (স্টক সমন্বয়)" },
-    { key: "suppliers", label: "Supplier Management (সাপ্লায়ার)" },
-    { key: "customers", label: "Customer Management (কাস্টমার)" },
-    { key: "purchases", label: "Purchase Records (পণ্য ক্রয়)" },
-    { key: "sales", label: "Sales Management (বিক্রি)" },
-    { key: "reports", label: "Reports & Analytics (রিপোর্ট)" },
-    { key: "settings", label: "Company Settings (সেটিংস)" },
+    { key: "products", label: t("menu.products") },
+    { key: "warehouses", label: t("menu.warehouses") },
+    { key: "adjustments", label: t("menu.inventory_adjustments") },
+    { key: "suppliers", label: t("menu.suppliers") },
+    { key: "customers", label: t("menu.customers") },
+    { key: "purchases", label: t("menu.purchases") },
+    { key: "sales", label: t("menu.sales") },
+    { key: "reports", label: t("menu.reports") },
+    { key: "settings", label: t("menu.settings") },
   ];
 
   const fetchUsers = async () => {
@@ -47,7 +50,7 @@ export default function UsersPage() {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -100,7 +103,7 @@ export default function UsersPage() {
         permissions: formData.role === "admin" ? "" : selectedPermissions.join(",")
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,11 +119,11 @@ export default function UsersPage() {
         fetchUsers();
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to add user");
+        alert(errData.message || t("users.add_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("users.something_wrong"));
     }
   };
 
@@ -140,7 +143,7 @@ export default function UsersPage() {
         permissions: editFormData.role === "admin" ? "" : editFormData.permissions.join(",")
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${editingUser._id}`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${editingUser._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -154,11 +157,11 @@ export default function UsersPage() {
         fetchUsers();
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to update user");
+        alert(errData.message || t("users.update_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("users.something_wrong"));
     }
   };
 
@@ -172,9 +175,9 @@ export default function UsersPage() {
 
   if (currentUserRole !== "admin") {
     return (
-      <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200">
-        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-        <p>You do not have permission to view or manage staff users. Only the Company Admin can access this page.</p>
+      <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200 font-sans">
+        <h2 className="text-xl font-bold mb-2">{t("users.access_denied_title")}</h2>
+        <p>{t("users.access_denied_desc")}</p>
       </div>
     );
   }
@@ -183,48 +186,48 @@ export default function UsersPage() {
     <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Staff & Managers</h1>
-          <p className="text-gray-500 text-sm mt-1">Configure employee dashboard access and module permissions</p>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("users.title")}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t("users.desc")}</p>
         </div>
         <button
           onClick={() => {
             setShowAddForm(!showAddForm);
             setSelectedPermissions([]);
           }}
-          className="bg-blue-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+          className="bg-blue-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm cursor-pointer text-sm"
         >
-          {showAddForm ? "Cancel" : "+ Add User"}
+          {showAddForm ? t("users.cancel") : t("users.add_button")}
         </button>
       </div>
 
       {showAddForm && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-in space-y-6">
-          <h2 className="text-xl font-bold text-gray-800 border-b border-gray-100 pb-2">Add New User</h2>
-          <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <h2 className="text-xl font-bold text-gray-800 border-b border-gray-100 pb-2">{t("users.add_title")}</h2>
+          <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
             <div>
-              <label className="block text-sm font-semibold text-gray-600">Name</label>
-              <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">{t("users.name")}</label>
+              <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600">Email</label>
-              <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">{t("users.email")}</label>
+              <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600">Password</label>
-              <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">{t("users.password")}</label>
+              <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-600">Role</label>
-              <select required value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                <option value="staff">Staff (Limited Access)</option>
-                <option value="manager">Manager (Standard Access)</option>
-                <option value="admin">Admin (Full Access)</option>
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">{t("users.role")}</label>
+              <select required value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs cursor-pointer">
+                <option value="staff">{t("users.role_staff_desc")}</option>
+                <option value="manager">{t("users.role_manager_desc")}</option>
+                <option value="admin">{t("users.role_admin_desc")}</option>
               </select>
             </div>
 
             {formData.role !== "admin" && (
-              <div className="md:col-span-2 space-y-3 bg-gray-50/50 p-5 rounded-lg border border-gray-100">
-                <span className="block text-sm font-bold text-gray-700">Set Allowed Modules (অনুমোদিত মডিউলসমূহ)</span>
+              <div className="md:col-span-2 space-y-3 bg-gray-50/50 p-5 rounded-lg border border-gray-100 animate-in fade-in duration-200">
+                <span className="block text-sm font-bold text-gray-700">{t("users.set_allowed_modules")}</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {modules.map((m) => (
                     <label key={m.key} className="flex items-center space-x-3 text-sm text-gray-600 font-medium cursor-pointer">
@@ -232,7 +235,7 @@ export default function UsersPage() {
                         type="checkbox"
                         checked={selectedPermissions.includes(m.key)}
                         onChange={(e) => handlePermissionChange(m.key, e.target.checked)}
-                        className="h-4.5 w-4.5 border-gray-300 text-blue-600 focus:ring-blue-500 rounded"
+                        className="h-4.5 w-4.5 border-gray-300 text-blue-600 focus:ring-blue-500 rounded cursor-pointer"
                       />
                       <span>{m.label}</span>
                     </label>
@@ -242,8 +245,8 @@ export default function UsersPage() {
             )}
 
             <div className="md:col-span-2 pt-2">
-              <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm cursor-pointer">
-                Save User
+              <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm cursor-pointer">
+                {t("users.save_btn")}
               </button>
             </div>
           </form>
@@ -252,21 +255,21 @@ export default function UsersPage() {
 
       {/* Users List Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Allowed Modules</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("users.table_name")}</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("users.table_email")}</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("users.table_role")}</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{t("users.th_allowed_modules")}</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">{t("users.table_actions")}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-500">
-                  No other users found.
+                <td colSpan="5" className="px-6 py-8 text-center text-gray-500 font-medium italic">
+                  {t("users.no_data")}
                 </td>
               </tr>
             ) : (
@@ -280,31 +283,34 @@ export default function UsersPage() {
                       u.role === 'manager' ? 'bg-green-100 text-green-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
-                      {u.role.toUpperCase()}
+                      {u.role === 'admin' ? t("users.role_admin") : u.role === 'manager' ? t("users.role_manager") : t("users.role_staff")}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {u.role === "admin" ? (
-                      <span className="text-gray-400 font-semibold italic">Full System Access</span>
+                      <span className="text-gray-400 font-semibold italic">{t("users.full_access")}</span>
                     ) : u.permissions ? (
                       <div className="flex flex-wrap gap-1 max-w-[300px]">
-                        {u.permissions.split(",").filter(Boolean).map(p => (
-                          <span key={p} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide">
-                            {p}
-                          </span>
-                        ))}
+                        {u.permissions.split(",").filter(Boolean).map(p => {
+                          const moduleObj = modules.find(m => m.key === p);
+                          return (
+                            <span key={p} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide">
+                              {moduleObj ? moduleObj.label : p}
+                            </span>
+                          );
+                        })}
                       </div>
                     ) : (
-                      <span className="text-red-400 font-semibold text-xs italic">No permissions assigned</span>
+                      <span className="text-red-400 font-semibold text-xs italic">{t("users.no_permissions")}</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold">
                     {u.role !== "super_admin" && (
                       <button
                         onClick={() => handleStartEdit(u)}
-                        className="text-blue-600 hover:text-blue-900 font-bold hover:underline cursor-pointer"
+                        className="text-blue-600 hover:text-blue-900 hover:underline cursor-pointer"
                       >
-                        Edit Permissions
+                        {t("users.edit_permissions")}
                       </button>
                     )}
                   </td>
@@ -318,40 +324,40 @@ export default function UsersPage() {
       {/* Edit User Permissions Modal Overlay */}
       {editingUser && (
         <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-100 w-full max-w-xl p-6 space-y-5 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-100 w-full max-w-xl p-6 space-y-5 animate-fade-in text-sm">
             <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-              <h3 className="text-lg font-bold text-gray-800">Edit User Role & Permissions</h3>
+              <h3 className="text-lg font-bold text-gray-800">{t("users.edit_modal_title")}</h3>
               <button 
                 onClick={() => setEditingUser(null)}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-semibold cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 text-2xl font-semibold cursor-pointer focus:outline-none"
               >
                 ×
               </button>
             </div>
 
-            <div className="space-y-1.5 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
-              <p><strong className="text-gray-700">Username:</strong> {editingUser.name}</p>
-              <p><strong className="text-gray-700">Email:</strong> {editingUser.email}</p>
+            <div className="space-y-1.5 text-xs text-gray-600 bg-gray-50 p-4 rounded-lg">
+              <p><strong className="text-gray-700">{t("users.edit_username")}</strong> {editingUser.name}</p>
+              <p><strong className="text-gray-700">{t("users.edit_email")}</strong> {editingUser.email}</p>
             </div>
 
             <form onSubmit={handleUpdateUser} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-600">Access Level / Role</label>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">{t("users.edit_role_label")}</label>
                 <select 
                   required 
                   value={editFormData.role} 
                   onChange={(e) => setEditFormData({...editFormData, role: e.target.value})} 
-                  className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs cursor-pointer"
                 >
-                  <option value="staff">Staff (Limited Access)</option>
-                  <option value="manager">Manager (Standard Access)</option>
-                  <option value="admin">Admin (Full Access)</option>
+                  <option value="staff">{t("users.role_staff_desc")}</option>
+                  <option value="manager">{t("users.role_manager_desc")}</option>
+                  <option value="admin">{t("users.role_admin_desc")}</option>
                 </select>
               </div>
 
               {editFormData.role !== "admin" && (
                 <div className="space-y-3">
-                  <span className="block text-sm font-bold text-gray-700 border-b border-gray-100 pb-1">Set Allowed Modules</span>
+                  <span className="block text-sm font-bold text-gray-700 border-b border-gray-100 pb-1">{t("users.set_allowed_modules")}</span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[180px] overflow-y-auto pr-2">
                     {modules.map((m) => (
                       <label key={m.key} className="flex items-center space-x-3 text-sm text-gray-600 font-medium cursor-pointer">
@@ -359,7 +365,7 @@ export default function UsersPage() {
                           type="checkbox"
                           checked={editFormData.permissions.includes(m.key)}
                           onChange={(e) => handlePermissionChange(m.key, e.target.checked, true)}
-                          className="h-4.5 w-4.5 border-gray-300 text-blue-600 focus:ring-blue-500 rounded"
+                          className="h-4.5 w-4.5 border-gray-300 text-blue-600 focus:ring-blue-500 rounded cursor-pointer"
                         />
                         <span>{m.label}</span>
                       </label>
@@ -372,15 +378,15 @@ export default function UsersPage() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 transition-colors text-sm cursor-pointer"
+                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 transition-colors text-xs cursor-pointer"
                 >
-                  Cancel
+                  {t("users.cancel")}
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors text-sm shadow-sm cursor-pointer"
+                  className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors text-xs shadow-sm cursor-pointer"
                 >
-                  Apply Changes
+                  {t("users.apply_changes")}
                 </button>
               </div>
             </form>

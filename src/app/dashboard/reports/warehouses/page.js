@@ -1,14 +1,16 @@
 "use client";
+import { apiFetch } from "../../../../lib/apiFetch";
+
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import { authClient } from "../../../../lib/auth-client";
+import { useLanguage } from "../../../../context/LanguageContext";
 import { 
   FaWarehouse, 
   FaCoins, 
-  FaDownload, 
   FaFileExcel,
   FaFilePdf
 } from "react-icons/fa";
@@ -16,6 +18,7 @@ import {
 export default function WarehouseReportsPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const { t, language } = useLanguage();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeWarehouseIdx, setActiveWarehouseIdx] = useState(0);
@@ -23,7 +26,7 @@ export default function WarehouseReportsPage() {
 
   const fetchReports = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/warehouses/reports`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/warehouses/reports`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -57,29 +60,29 @@ export default function WarehouseReportsPage() {
 
   const handleExportExcel = () => {
     if (!activeWarehouse || filteredItems.length === 0) {
-      alert("No data available to export.");
+      alert(t("warehouse_reports.export_no_data"));
       return;
     }
 
     const excelData = filteredItems.map(item => ({
-      "Product Name": item.name,
-      "SKU": item.sku,
-      "Category": item.category,
-      "Brand": item.brand,
-      "Stock Qty": item.stock,
-      "Unit Price": `$${item.price}`,
-      "Total Value": `$${item.stock * item.price}`
+      [t("warehouse_reports.th_product")]: item.name,
+      [t("warehouse_reports.th_sku")]: item.sku,
+      [t("warehouse_reports.th_category")]: item.category || "N/A",
+      [t("warehouse_reports.th_brand")]: item.brand || "N/A",
+      [t("warehouse_reports.th_stock")]: item.stock,
+      [t("purchases.unit_price")]: `$${item.price}`,
+      [t("warehouse_reports.th_value")]: `$${item.stock * item.price}`
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Warehouse Inventory");
+    XLSX.utils.book_append_sheet(workbook, worksheet, t("warehouse_reports.excel_sheet_title"));
     XLSX.writeFile(workbook, `inventory_${activeWarehouse.name.replace(/\s+/g, "_")}_${new Date().getTime()}.xlsx`);
   };
 
   const handleExportPDF = async () => {
     if (!activeWarehouse || filteredItems.length === 0) {
-      alert("No data available to export.");
+      alert(t("warehouse_reports.export_no_data"));
       return;
     }
 
@@ -92,22 +95,41 @@ export default function WarehouseReportsPage() {
       // Title
       doc.setFontSize(18);
       doc.setTextColor(40);
-      doc.text(`Warehouse Inventory Report: ${activeWarehouse.name}`, 14, 22);
+      doc.text(t("warehouse_reports.pdf_title").replace("{name}", activeWarehouse.name), 14, 22);
       
       // Subtitle
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(`Address: ${activeWarehouse.address || "No address provided"}`, 14, 28);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 34);
-      doc.text(`Total Stock: ${activeWarehouse.totalStock} units  |  Total Valuation: $${activeWarehouse.totalValue.toLocaleString()}`, 14, 40);
+      doc.text(t("warehouse_reports.pdf_address").replace("{address}", activeWarehouse.address || t("warehouse_reports.address_none")), 14, 28);
       
-      const tableColumn = ["Product Name", "SKU", "Category", "Brand", "Stock Qty", "Unit Price", "Total Value"];
+      const dateStr = new Date().toLocaleString(language === "bn" ? "bn-BD" : "en-US");
+      const generatedLabel = language === "bn" ? "রিপোর্ট তৈরির সময়: " : "Generated on: ";
+      doc.text(`${generatedLabel}${dateStr}`, 14, 34);
+      
+      doc.text(
+        t("warehouse_reports.pdf_total_valuation")
+          .replace("{stock}", activeWarehouse.totalStock.toString())
+          .replace("{value}", activeWarehouse.totalValue.toLocaleString()),
+        14,
+        40
+      );
+      
+      const tableColumn = [
+        t("warehouse_reports.th_product"),
+        t("warehouse_reports.th_sku"),
+        t("warehouse_reports.th_category"),
+        t("warehouse_reports.th_brand"),
+        t("warehouse_reports.th_stock"),
+        t("purchases.unit_price"),
+        t("warehouse_reports.th_value")
+      ];
+      
       const tableRows = filteredItems.map(item => [
         item.name,
         item.sku,
         item.category || "N/A",
         item.brand || "N/A",
-        `${item.stock} Units`,
+        t("warehouse_reports.units_suffix").replace("{count}", item.stock.toString()),
         `$${item.price}`,
         `$${item.stock * item.price}`
       ]);
@@ -124,7 +146,7 @@ export default function WarehouseReportsPage() {
       doc.save(`inventory_${activeWarehouse.name.replace(/\s+/g, "_")}_${new Date().getTime()}.pdf`);
     } catch (err) {
       console.error(err);
-      alert("Failed to generate PDF report.");
+      alert(t("warehouse_reports.pdf_failed"));
     }
   };
 
@@ -141,35 +163,35 @@ export default function WarehouseReportsPage() {
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
-            <Link href="/dashboard/reports" className="hover:text-blue-600 transition-colors">Reports</Link>
+            <Link href="/dashboard/reports" className="hover:text-blue-600 transition-colors">{t("menu.reports")}</Link>
             <span>/</span>
-            <span className="text-gray-800 font-semibold">Warehouses</span>
+            <span className="text-gray-800 font-semibold">{t("menu.warehouses")}</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Warehouse stock status</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Track and evaluate items across individual storage locations</p>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("warehouse_reports.title")}</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{t("warehouse_reports.desc")}</p>
         </div>
         <Link 
           href="/dashboard/reports" 
           className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm shadow-sm"
         >
-          ← Back to Reports
+          {t("warehouse_reports.back_btn")}
         </Link>
       </div>
 
       {reports.length === 0 ? (
         <div className="bg-white p-8 text-center rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
           <FaWarehouse className="text-blue-500 text-5xl mb-3" />
-          <h2 className="text-lg font-bold text-gray-800">No Warehouses Found</h2>
-          <p className="text-gray-500 text-sm mt-1 mb-4">Please set up warehouses in the system to view reports.</p>
+          <h2 className="text-lg font-bold text-gray-800">{t("warehouse_reports.no_wh_title")}</h2>
+          <p className="text-gray-500 text-sm mt-1 mb-4">{t("warehouse_reports.no_wh_desc")}</p>
           <Link href="/dashboard/warehouses" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-            Manage Warehouses
+            {t("warehouse_reports.manage_wh")}
           </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Sidebar selector list */}
           <div className="space-y-3">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Storage godown list</h2>
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t("warehouse_reports.wh_list")}</h2>
             {reports.map((wh, idx) => (
               <div 
                 key={wh._id}
@@ -186,15 +208,15 @@ export default function WarehouseReportsPage() {
                 <div>
                   <h3 className="font-bold truncate text-base">{wh.name}</h3>
                   <p className={`text-xs mt-0.5 truncate ${activeWarehouseIdx === idx ? "text-blue-100" : "text-gray-400"}`}>
-                    📍 {wh.address || "No address provided"}
+                    📍 {wh.address || t("warehouse_reports.address_none")}
                   </p>
                 </div>
                 <div className="flex justify-between items-center border-t pt-2 border-white/10 mt-2 text-xs">
                   <span className={activeWarehouseIdx === idx ? "text-blue-100" : "text-gray-500"}>
-                    Items: <strong>{wh.totalItemsCount}</strong>
+                    {t("warehouse_reports.items_count").replace("{count}", wh.totalItemsCount.toString())}
                   </span>
                   <span className={`font-extrabold uppercase ${activeWarehouseIdx === idx ? "text-white" : "text-gray-800"}`}>
-                    Stock: {wh.totalStock} units
+                    {t("warehouse_reports.stock_qty").replace("{stock}", wh.totalStock.toString())}
                   </span>
                 </div>
               </div>
@@ -208,13 +230,13 @@ export default function WarehouseReportsPage() {
                 {/* GODOWN METRICS STATS */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800">{activeWarehouse.name} Details</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">📍 {activeWarehouse.address}</p>
+                    <h2 className="text-xl font-bold text-gray-800">{activeWarehouse.name} {t("warehouse_reports.details_suffix")}</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">📍 {activeWarehouse.address || t("warehouse_reports.address_none")}</p>
                   </div>
                   <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 shrink-0 flex items-center gap-3">
                     <FaCoins className="text-blue-600 text-2xl" />
                     <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Total Valuation</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">{t("warehouse_reports.total_val")}</p>
                       <p className="text-lg font-extrabold text-blue-600">${activeWarehouse.totalValue.toLocaleString()}</p>
                     </div>
                   </div>
@@ -225,7 +247,7 @@ export default function WarehouseReportsPage() {
                   <div className="p-4 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
                     <input 
                       type="text" 
-                      placeholder="Search by product name or SKU..." 
+                      placeholder={t("warehouse_reports.search_placeholder")} 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full sm:max-w-xs"
@@ -235,13 +257,13 @@ export default function WarehouseReportsPage() {
                         onClick={handleExportExcel}
                         className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <FaFileExcel className="w-3.5 h-3.5" /> Export Excel
+                        <FaFileExcel className="w-3.5 h-3.5" /> {t("warehouse_reports.export_excel")}
                       </button>
                       <button 
                         onClick={handleExportPDF}
                         className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <FaFilePdf className="w-3.5 h-3.5" /> Export PDF
+                        <FaFilePdf className="w-3.5 h-3.5" /> {t("warehouse_reports.export_pdf")}
                       </button>
                     </div>
                   </div>
@@ -250,19 +272,19 @@ export default function WarehouseReportsPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
-                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">SKU</th>
-                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
-                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Brand</th>
-                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Stock</th>
-                          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Value</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("warehouse_reports.th_product")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("warehouse_reports.th_sku")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("warehouse_reports.th_category")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("warehouse_reports.th_brand")}</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("warehouse_reports.th_stock")}</th>
+                          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">{t("warehouse_reports.th_value")}</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200 text-sm">
                         {filteredItems.length === 0 ? (
                           <tr>
                             <td colSpan="6" className="px-5 py-8 text-center text-gray-400 text-xs italic">
-                              No matching products located in this warehouse.
+                              {t("warehouse_reports.no_matching")}
                             </td>
                           </tr>
                         ) : (
@@ -270,13 +292,13 @@ export default function WarehouseReportsPage() {
                             <tr key={item._id} className="hover:bg-gray-50/50 transition-colors">
                               <td className="px-5 py-3 font-semibold text-gray-800">{item.name}</td>
                               <td className="px-5 py-3 text-xs text-gray-500 font-mono">{item.sku}</td>
-                              <td className="px-5 py-3 text-xs text-gray-500">{item.category}</td>
-                              <td className="px-5 py-3 text-xs text-gray-500">{item.brand}</td>
+                              <td className="px-5 py-3 text-xs text-gray-500">{item.category || "N/A"}</td>
+                              <td className="px-5 py-3 text-xs text-gray-500">{item.brand || "N/A"}</td>
                               <td className="px-5 py-3">
                                 <span className={`px-2 inline-flex text-[10px] leading-5 font-bold rounded-full ${
                                   item.stock > 10 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                                 }`}>
-                                  {item.stock} Units
+                                  {t("warehouse_reports.units_suffix").replace("{count}", item.stock.toString())}
                                 </span>
                               </td>
                               <td className="px-5 py-3 text-right font-bold text-gray-900">${(item.stock * item.price).toLocaleString()}</td>

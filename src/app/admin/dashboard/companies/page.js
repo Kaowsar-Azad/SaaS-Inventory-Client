@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "../../../../lib/apiFetch";
 
 export default function AdminCompaniesPage() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function AdminCompaniesPage() {
 
   const fetchCompanies = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/companies`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/companies`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -30,7 +31,7 @@ export default function AdminCompaniesPage() {
 
   const handlePlanChange = async (companyId, newPlan) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/companies/${companyId}/plan`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/companies/${companyId}/plan`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "../../../lib/apiFetch";
 
 export default function AdminOverview() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function AdminOverview() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/stats`, {
+        const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/stats`, {
           credentials: "include",
         });
 

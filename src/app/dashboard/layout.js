@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { authClient } from "../../lib/auth-client";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import { useLanguage } from "../../context/LanguageContext";
+import { apiFetch } from "../../lib/apiFetch";
 
 export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
+  const { t } = useLanguage();
   const [companyStatus, setCompanyStatus] = useState("active");
   const [companyLoading, setCompanyLoading] = useState(true);
 
@@ -23,7 +26,7 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     if (session) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      fetch(`${apiUrl}/company/settings`, { credentials: "include" })
+      apiFetch(`${apiUrl}/company/settings`, { credentials: "include" })
         .then((res) => {
           if (res.status === 402) {
             setCompanyStatus("suspended");
@@ -54,7 +57,7 @@ export default function DashboardLayout({ children }) {
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-500">{t("warehouses.loading") || "Loading..."}</p>
         </div>
       </div>
     );
@@ -120,9 +123,9 @@ export default function DashboardLayout({ children }) {
                 ⚠️
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight">Subscription Expired!</h2>
+                <h2 className="text-2xl font-bold tracking-tight">{t("billing.suspended_title")}</h2>
                 <p className="text-gray-400 text-sm leading-relaxed">
-                  Your company's subscription has been suspended. Your data and settings are safely preserved. To restore access, please renew your subscription.
+                  {t("billing.suspended_desc")}
                 </p>
               </div>
               <div>
@@ -130,7 +133,7 @@ export default function DashboardLayout({ children }) {
                   onClick={() => router.push("/dashboard/billing")}
                   className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer animate-pulse-subtle"
                 >
-                  💳 Go to Billing Page to Pay
+                  {t("billing.suspended_btn")}
                 </button>
               </div>
             </div>
@@ -150,8 +153,8 @@ export default function DashboardLayout({ children }) {
             children
           ) : (
             <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200">
-              <h2 className="text-xl font-bold mb-2">প্রবেশাধিকার সংরক্ষিত (Access Denied)</h2>
-              <p>আপনার এই মডিউলটি অ্যাক্সেস করার অনুমতি নেই। অনুগ্রহ করে আপনার কোম্পানির অ্যাডমিনের সাথে যোগাযোগ করুন।</p>
+              <h2 className="text-xl font-bold mb-2">{t("dashboard.access_denied")}</h2>
+              <p>{t("dashboard.access_denied_desc")}</p>
             </div>
           )}
         </main>

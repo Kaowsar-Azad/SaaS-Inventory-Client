@@ -1,8 +1,11 @@
 "use client";
+import { apiFetch } from "../../../lib/apiFetch";
+
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../../lib/auth-client";
+import { useLanguage } from "../../../context/LanguageContext";
 import { 
   FaSearch, 
   FaExclamationTriangle, 
@@ -15,6 +18,7 @@ import {
 export default function DamagedItemsPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const { t } = useLanguage();
 
   const [damages, setDamages] = useState([]);
   const [products, setProducts] = useState([]);
@@ -35,9 +39,9 @@ export default function DamagedItemsPage() {
     try {
       const options = { credentials: "include" };
       const [adjRes, prodRes, whRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/adjustments`, options),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, options),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/warehouses`, options),
+        apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/adjustments`, options),
+        apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, options),
+        apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/warehouses`, options),
       ]);
 
       if (adjRes.ok) {
@@ -78,7 +82,7 @@ export default function DamagedItemsPage() {
     };
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/adjustments`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/adjustments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -94,14 +98,14 @@ export default function DamagedItemsPage() {
         });
         setShowAddForm(false);
         fetchData();
-        alert("Damaged item log successfully saved!");
+        alert(t("damages.save_success"));
       } else {
         const err = await res.json();
-        alert(err.message || "Failed to submit damaged item log");
+        alert(err.message || t("damages.save_failed"));
       }
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      alert(t("categories.something_wrong"));
     }
   };
 
@@ -116,7 +120,7 @@ export default function DamagedItemsPage() {
       <div className="flex h-96 items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-gray-500">Loading Damaged Items Logs...</p>
+          <p className="text-sm text-gray-500">{t("damages.loading")}</p>
         </div>
       </div>
     );
@@ -129,16 +133,16 @@ export default function DamagedItemsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
-            <FaTrashAlt className="text-rose-500" /> Damaged Items (নষ্ট পণ্য)
+            <FaTrashAlt className="text-rose-500" /> {t("damages.title")}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Record and view logs of damaged stock removed from inventory levels.</p>
+          <p className="text-gray-500 text-sm mt-1">{t("damages.desc")}</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-rose-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-rose-700 transition-colors shadow-md flex items-center space-x-2 cursor-pointer"
         >
           <FaPlus className="text-xs" />
-          <span>{showAddForm ? "Cancel" : "Log Damaged Item"}</span>
+          <span>{showAddForm ? t("damages.cancel") : t("damages.log_button")}</span>
         </button>
       </div>
 
@@ -146,40 +150,40 @@ export default function DamagedItemsPage() {
       {showAddForm && (
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 animate-in fade-in duration-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-            <FaExclamationTriangle className="text-amber-500 text-sm" /> Record New Damage Log
+            <FaExclamationTriangle className="text-amber-500 text-sm" /> {t("damages.record_new")}
           </h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Select Product</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">{t("damages.select_product")}</label>
               <select
                 required
                 value={formData.productId}
                 onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
                 className="block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-xs cursor-pointer"
               >
-                <option value="">Choose a product...</option>
+                <option value="">{t("damages.choose_product")}</option>
                 {products.map((p) => (
                   <option key={p._id} value={p._id}>
-                    {p.name} (SKU: {p.sku}) [Global Stock: {p.stock}]
+                    {p.name} (SKU: {p.sku}) [{t("products.global_stock")}: {p.stock}]
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Warehouse (Optional)</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">{t("damages.warehouse_optional")}</label>
               <select
                 value={formData.warehouseId}
                 onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value })}
                 className="block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-xs cursor-pointer"
               >
-                <option value="">Not Warehouse Specific (Global Only)</option>
+                <option value="">{t("damages.global_only")}</option>
                 {warehouses.map((w) => {
                   const selectedProd = products.find(p => p._id === formData.productId);
                   const wStock = selectedProd?.warehouseStocks?.find(ws => ws.warehouseId === w._id)?.stock || 0;
                   return (
                     <option key={w._id} value={w._id}>
-                      {w.name} {formData.productId ? `(Warehouse Stock: ${wStock})` : ""}
+                      {w.name} {formData.productId ? ` (${t("dashboard.stock")}: ${wStock})` : ""}
                     </option>
                   );
                 })}
@@ -187,26 +191,26 @@ export default function DamagedItemsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Quantity Damaged</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">{t("damages.quantity")}</label>
               <input
                 type="number"
                 required
                 min="1"
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                placeholder="Enter quantity amount..."
+                placeholder={t("damages.qty_placeholder")}
                 className="block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-xs"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Reason / Notes</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">{t("damages.reason")}</label>
               <input
                 type="text"
                 required
                 value={formData.reason}
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                placeholder="e.g. Expired, broken packaging, defective unit"
+                placeholder={t("damages.reason_placeholder")}
                 className="block w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-xs"
               />
             </div>
@@ -216,7 +220,7 @@ export default function DamagedItemsPage() {
                 type="submit"
                 className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg shadow-sm text-xs cursor-pointer transition-colors"
               >
-                Save Damage Entry & Deduct Stock
+                {t("damages.save_btn")}
               </button>
             </div>
           </form>
@@ -227,7 +231,7 @@ export default function DamagedItemsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <FaBoxes className="text-gray-400 text-sm" /> Historical Damage Logs
+            <FaBoxes className="text-gray-400 text-sm" /> {t("damages.history_title")}
           </h2>
           {/* Search bar */}
           <div className="relative w-full sm:w-64">
@@ -236,7 +240,7 @@ export default function DamagedItemsPage() {
             </span>
             <input
               type="text"
-              placeholder="Search by product name, SKU or reason..."
+              placeholder={t("damages.search_placeholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full border border-gray-300 rounded-lg shadow-sm py-1.5 pl-9 pr-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-xs"
@@ -248,20 +252,20 @@ export default function DamagedItemsPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Logged</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Quantity</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Warehouse</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason / Description</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.date_logged")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.product")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.sku")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.qty")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.warehouse")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.reason_desc")}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.status")}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredDamages.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-8 text-center text-sm text-gray-500">
-                    No damaged items logs found matching your criteria.
+                    {t("damages.no_data")}
                   </td>
                 </tr>
               ) : (
@@ -277,7 +281,7 @@ export default function DamagedItemsPage() {
                       {item.productId?.sku || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-rose-600 font-extrabold">
-                      -{item.quantity} units
+                      -{item.quantity} {t("dashboard.units")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
                       {item.warehouseId ? (
@@ -291,7 +295,7 @@ export default function DamagedItemsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800">
-                        ⚠️ Logged
+                        ⚠️ {t("damages.logged_status")}
                       </span>
                     </td>
                   </tr>
