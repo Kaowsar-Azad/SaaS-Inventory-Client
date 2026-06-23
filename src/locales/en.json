@@ -224,7 +224,8 @@
     "qty": "Qty",
     "stock_label": "Stock",
     "size_placeholder": "e.g. M, L, XL",
-    "color_placeholder": "e.g. Red, Black"
+    "color_placeholder": "e.g. Red, Black",
+    "export_excel": "Export Excel"
   },
   "activities": {
     "title": "System Activity Logs",

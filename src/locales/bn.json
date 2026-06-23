@@ -224,7 +224,8 @@
     "qty": "পরিমাণ",
     "stock_label": "স্টক",
     "size_placeholder": "যেমন- M, L, XL",
-    "color_placeholder": "যেমন- লাল, কালো"
+    "color_placeholder": "যেমন- লাল, কালো",
+    "export_excel": "এক্সেল এক্সপোর্ট"
   },
   "activities": {
     "title": "সিস্টেম অ্যাক্টিভিটি লগস",

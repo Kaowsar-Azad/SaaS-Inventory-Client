@@ -174,6 +174,49 @@ export default function ProductsPage() {
     setEditFormData({ ...editFormData, variants: updated });
   };
 
+  const generateSku = (isEdit = false) => {
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    const prefix = "SKU";
+    const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+    const generated = `${prefix}-${dateStr}-${randomNum}`;
+    
+    if (isEdit) {
+      setEditFormData(prev => ({ ...prev, sku: generated }));
+    } else {
+      setFormData(prev => ({ ...prev, sku: generated }));
+    }
+  };
+
+  const handleExcelExport = async () => {
+    if (products.length === 0) {
+      alert(t("products.no_data") || "No product data to export");
+      return;
+    }
+
+    try {
+      const XLSX = await import("xlsx");
+      
+      const excelData = products.map(prod => ({
+        "Product Name": prod.name,
+        "SKU": prod.sku,
+        "Category": prod.category?.name || "N/A",
+        "Brand": prod.brand?.name || "N/A",
+        "Price": prod.price,
+        "Stock": prod.stock,
+        "Reorder Level": prod.reorderLevel ?? 10,
+        "Variants": prod.variants?.map(v => `${v.size || ""}/${v.color || ""}(qty: ${v.stock})`).join(", ") || ""
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+      XLSX.writeFile(workbook, `products_list_${new Date().getTime()}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      alert(t("products.export_excel_failed") || "Failed to export Excel report.");
+    }
+  };
+
   const handleExcelImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -298,6 +341,12 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-800 tracking-tight">{t("products.title")}</h1>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={handleExcelExport}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm text-sm flex items-center space-x-1 cursor-pointer"
+          >
+            📤 {t("products.export_excel") || "Export Excel"}
+          </button>
           <label className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm cursor-pointer text-sm">
             📥 {t("products.import_excel")}
             <input type="file" accept=".xlsx, .xls" onChange={handleExcelImport} className="hidden" />
@@ -320,7 +369,16 @@ export default function ProductsPage() {
               <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">{t("products.sku")}</label>
+              <div className="flex justify-between items-center">
+                <label className="block text-sm font-medium text-gray-700">{t("products.sku")}</label>
+                <button
+                  type="button"
+                  onClick={() => generateSku(false)}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold focus:outline-none cursor-pointer"
+                >
+                  ⚡ Generate SKU
+                </button>
+              </div>
               <input type="text" required value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
             </div>
             <div>
@@ -480,7 +538,16 @@ export default function ProductsPage() {
                 <input type="text" required value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">{t("products.sku")}</label>
+                <div className="flex justify-between items-center">
+                  <label className="block text-sm font-medium text-gray-700">{t("products.sku")}</label>
+                  <button
+                    type="button"
+                    onClick={() => generateSku(true)}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold focus:outline-none cursor-pointer"
+                  >
+                    ⚡ Generate SKU
+                  </button>
+                </div>
                 <input type="text" required value={editFormData.sku} onChange={(e) => setEditFormData({...editFormData, sku: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
               </div>
               <div>
