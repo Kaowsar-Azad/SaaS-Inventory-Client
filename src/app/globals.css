@@ -3,4 +3,9 @@
 
 @source "../../node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}";
 
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
 @custom-variant dark (&:is(.dark *));

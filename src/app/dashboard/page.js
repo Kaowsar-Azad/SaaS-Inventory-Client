@@ -14,35 +14,57 @@ import {
   FaExclamationTriangle 
 } from "react-icons/fa";
 import {
-  AreaChart,
-  Area,
+  ComposedChart,
+  Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 
 const CustomActiveDot = (props) => {
   const { cx, cy } = props;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={10} fill="#6366f1" fillOpacity={0.2} />
-      <circle cx={cx} cy={cy} r={5} fill="#6366f1" stroke="#ffffff" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={10} fill="#e23880" fillOpacity={0.2} />
+      <circle cx={cx} cy={cy} r={5.5} fill="#ffffff" stroke="#e23880" strokeWidth={2.5} />
     </g>
   );
 };
 
 const CustomTooltip = ({ active, payload, label, symbol }) => {
   if (active && payload && payload.length) {
+    const revenue = payload.find(p => p.dataKey === "amount");
+    const count = payload.find(p => p.dataKey === "count");
     return (
-      <div className="bg-white/95 backdrop-blur-sm border border-gray-100 p-3.5 rounded-xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)] text-xs min-w-[140px]">
-        <p className="text-gray-400 font-bold mb-1 tracking-wider uppercase text-[9px]">{label}</p>
-        <div className="flex items-center space-x-1.5 mt-1">
-          <span className="w-2 h-2 rounded-full bg-indigo-600 shadow-sm shadow-indigo-200"></span>
-          <p className="text-sm font-extrabold text-gray-800">
-            {symbol}{payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </p>
+      <div className="bg-white/95 backdrop-blur-sm border border-slate-100 p-3.5 rounded-2xl shadow-xl text-xs min-w-[150px] space-y-2">
+        <p className="text-slate-400 font-bold tracking-wider uppercase text-[9px]">{label}</p>
+        <div className="space-y-1.5">
+          {revenue && (
+            <div className="flex items-center justify-between space-x-4">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm shadow-blue-200"></span>
+                <span className="text-slate-500 font-medium">Earnings</span>
+              </div>
+              <span className="text-sm font-black text-slate-800">
+                {symbol}{revenue.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
+          {count && (
+            <div className="flex items-center justify-between space-x-4">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shadow-sm shadow-pink-200"></span>
+                <span className="text-slate-500 font-medium">Downloads</span>
+              </div>
+              <span className="text-sm font-black text-slate-800">
+                {count.value}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -113,31 +135,36 @@ export default function DashboardOverview() {
     { 
       title: t("dashboard.total_products"), 
       value: stats?.totalProducts ?? 0, 
-      color: "bg-blue-500",
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-500",
       icon: <FaBoxes className="w-6 h-6" />
     },
     { 
       title: t("dashboard.total_sales"), 
       value: stats?.totalSales ? `${symbol}${stats.totalSales.toLocaleString()}` : `${symbol}0`, 
-      color: "bg-green-500",
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-500",
       icon: <FaChartLine className="w-6 h-6" />
     },
     { 
       title: t("dashboard.total_purchases"), 
       value: stats?.totalPurchases ? `${symbol}${stats.totalPurchases.toLocaleString()}` : `${symbol}0`, 
-      color: "bg-purple-500",
+      iconBg: "bg-purple-50",
+      iconColor: "text-purple-500",
       icon: <FaShoppingCart className="w-6 h-6" />
     },
     { 
       title: t("dashboard.stock_value"), 
       value: stats?.totalStockValue ? `${symbol}${stats.totalStockValue.toLocaleString()}` : `${symbol}0`, 
-      color: "bg-amber-500",
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-500",
       icon: <FaCoins className="w-6 h-6" />
     },
     { 
       title: t("dashboard.low_stock_items"), 
       value: stats?.lowStockItems ?? 0, 
-      color: "bg-red-500",
+      iconBg: "bg-rose-50",
+      iconColor: "text-rose-500",
       icon: <FaExclamationTriangle className="w-6 h-6" />
     },
   ];
@@ -182,6 +209,33 @@ export default function DashboardOverview() {
 
   const revenueHistory = stats?.revenueHistory || [];
   const periodTotal = revenueHistory.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const periodTotalOrders = revenueHistory.reduce((sum, item) => sum + (item.count || 0), 0);
+
+  // Dynamic calculations for aligning Left YAxis (Revenue) and Right YAxis (Downloads)
+  const maxAmount = Math.max(...revenueHistory.map(d => d.amount || 0), 0);
+  const maxCount = Math.max(...revenueHistory.map(d => d.count || 0), 0);
+
+  // Left max is dynamically adjusted to the next multiple of 80 (default min 320)
+  const leftMax = maxAmount > 320 ? Math.ceil(maxAmount / 80) * 80 : 320;
+  const leftTicks = [0, leftMax * 0.25, leftMax * 0.5, leftMax * 0.75, leftMax];
+
+  // Scale rightMax dynamically so maxCount maps exactly to maxAmount's height
+  const rightMax = maxCount > 0 && maxAmount > 0 
+    ? maxCount * (leftMax / maxAmount) 
+    : 5;
+
+  // Clean ticks for Right Axis representing actual counts
+  const rightTicks = [];
+  if (maxCount <= 5) {
+    for (let i = 0; i <= maxCount; i++) {
+      rightTicks.push(i);
+    }
+  } else {
+    const step = Math.ceil(maxCount / 4);
+    for (let i = 0; i <= 4; i++) {
+      rightTicks.push(i * step);
+    }
+  }
 
   // Extracted custom chart components to prevent remounting loops
 
@@ -198,7 +252,7 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         {statCards.map((stat, idx) => (
           <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center space-x-4 transition-all hover:-translate-y-1 hover:shadow-md duration-300">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white ${stat.color} shadow-sm`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${stat.iconBg} ${stat.iconColor}`}>
               {stat.icon}
             </div>
             <div>
@@ -252,50 +306,68 @@ export default function DashboardOverview() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueHistory} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
-                    <stop offset="50%" stopColor="#8b5cf6" stopOpacity={0.08} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.00} />
-                  </linearGradient>
-                  <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="50%" stopColor="#8b5cf6" />
-                    <stop offset="100%" stopColor="#3b82f6" />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" opacity={0.6} />
+              <ComposedChart data={revenueHistory} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="label" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 500 }} 
+                  tick={{ fontSize: 11, fill: '#6b7280', fontWeight: 500 }} 
                   dy={10} 
                   minTickGap={20}
                 />
+                {/* Left YAxis - Earnings (Blue) */}
                 <YAxis 
+                  yAxisId="left"
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 500 }} 
-                  tickFormatter={(val) => `${symbol}${val >= 1000 ? (val/1000).toFixed(1)+'k' : val}`}
+                  tick={{ fontSize: 11, fill: '#1b75e7', fontWeight: 600 }} 
+                  tickFormatter={(val) => `${symbol}${val}`}
+                  ticks={leftTicks}
+                  domain={[0, leftMax]}
                   dx={-10}
                 />
+                {/* Right YAxis - Downloads (Pink) */}
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#e23880', fontWeight: 600 }} 
+                  ticks={rightTicks}
+                  domain={[0, rightMax]}
+                  dx={10}
+                />
                 <Tooltip 
-                  cursor={{ stroke: '#d1d5db', strokeWidth: 1, strokeDasharray: '4 4' }} 
+                  cursor={{ fill: '#f8fafc', opacity: 0.5 }} 
                   content={(props) => <CustomTooltip {...props} symbol={symbol} />} 
                 />
-                <Area 
-                  type="monotone"
+                {/* Blue Bars representing Revenue (Earnings) */}
+                <Bar 
+                  yAxisId="left"
                   dataKey="amount" 
-                  stroke="url(#lineGradient)" 
-                  strokeWidth={3}
-                  fill="url(#colorRevenue)"
-                  dot={false}
+                  fill="#1b75e7"
+                  radius={[0, 0, 0, 0]}
+                  maxBarSize={40}
+                  animationDuration={1000}
+                />
+                {/* Pink Line representing Orders (Downloads) */}
+                <Line 
+                  yAxisId="right"
+                  type="linear"
+                  dataKey="count" 
+                  stroke="#e23880"
+                  strokeWidth={2.5}
+                  dot={{ r: 4.5, fill: '#ffffff', stroke: '#e23880', strokeWidth: 2 }}
                   activeDot={<CustomActiveDot />}
                   animationDuration={1000}
                 />
-              </AreaChart>
+                {/* Horizontal Dotted Reference Lines at Y = 80, 160, 240, and 320 (Dynamic Multiples of 80) */}
+                <ReferenceLine yAxisId="left" y={leftMax * 0.25} stroke="#cbd5e1" strokeDasharray="3 3" />
+                <ReferenceLine yAxisId="left" y={leftMax * 0.5} stroke="#cbd5e1" strokeDasharray="3 3" />
+                <ReferenceLine yAxisId="left" y={leftMax * 0.75} stroke="#cbd5e1" strokeDasharray="3 3" />
+                <ReferenceLine yAxisId="left" y={leftMax} stroke="#cbd5e1" strokeDasharray="3 3" />
+              </ComposedChart>
             </ResponsiveContainer>
           )}
         </div>

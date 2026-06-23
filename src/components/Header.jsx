@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { authClient } from "../lib/auth-client";
 import { useLanguage } from "../context/LanguageContext";
+import { FiLogOut } from "react-icons/fi";
 
 export default function Header() {
   const router = useRouter();
@@ -47,9 +48,10 @@ export default function Header() {
         </span>
         <button
           onClick={handleLogout}
-          className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+          className="flex items-center space-x-1.5 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-4.5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-[0_2px_10px_rgba(244,63,94,0.15)] hover:shadow-[0_4px_15px_rgba(244,63,94,0.3)] hover:-translate-y-0.5 active:scale-95 transform cursor-pointer"
         >
-          {t("header.logout")}
+          <FiLogOut className="w-3.5 h-3.5" />
+          <span>{t("header.logout")}</span>
         </button>
       </div>
     </header>
