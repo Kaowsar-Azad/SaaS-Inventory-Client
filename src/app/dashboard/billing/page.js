@@ -77,12 +77,35 @@ export default function BillingPage(props) {
 
   useEffect(() => {
     const status = searchParams?.status;
+    const sessionId = searchParams?.session_id;
     let timer;
     if (status === "success") {
       setNotification({
         type: "success",
         message: "🎉 " + (t("billing.payment_success") || "Payment successful! Your subscription has been activated."),
       });
+      
+      if (sessionId) {
+        const verifySession = async () => {
+          try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+            const verifyRes = await apiFetch(`${apiUrl}/payments/verify-session`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ sessionId }),
+            });
+            if (verifyRes.ok) {
+              fetchCompanyDetails();
+              fetchBillingHistory();
+            }
+          } catch (err) {
+            console.error("Failed to verify session", err);
+          }
+        };
+        verifySession();
+      }
+
       router.replace("/dashboard/billing");
       timer = setTimeout(() => {
         setNotification(null);
@@ -445,7 +468,7 @@ export default function BillingPage(props) {
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           item.status === "success" ? "bg-emerald-500" : item.status === "pending" ? "bg-amber-500 animate-pulse" : "bg-rose-500"
                         }`}></span>
-                        {item.status === "success" ? t("billing.active") : item.status === "pending" ? t("pos.due") : item.status.toUpperCase()}
+                        {item.status === "success" ? t("billing.active") : item.status === "pending" ? t("billing.pending") : item.status.toUpperCase()}
                       </span>
                     </td>
                   </tr>

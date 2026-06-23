@@ -35,7 +35,7 @@ const CustomActiveDot = (props) => {
   );
 };
 
-const CustomTooltip = ({ active, payload, label, symbol }) => {
+const CustomTooltip = ({ active, payload, label, symbol, t }) => {
   if (active && payload && payload.length) {
     const revenue = payload.find(p => p.dataKey === "amount");
     const count = payload.find(p => p.dataKey === "count");
@@ -47,7 +47,7 @@ const CustomTooltip = ({ active, payload, label, symbol }) => {
             <div className="flex items-center justify-between space-x-4">
               <div className="flex items-center space-x-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm shadow-blue-200"></span>
-                <span className="text-slate-500 font-medium">Earnings</span>
+                <span className="text-slate-500 font-medium">{t ? t("dashboard.earnings") : "Revenue"}</span>
               </div>
               <span className="text-sm font-black text-slate-800">
                 {symbol}{revenue.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -58,7 +58,7 @@ const CustomTooltip = ({ active, payload, label, symbol }) => {
             <div className="flex items-center justify-between space-x-4">
               <div className="flex items-center space-x-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shadow-sm shadow-pink-200"></span>
-                <span className="text-slate-500 font-medium">Downloads</span>
+                <span className="text-slate-500 font-medium">{t ? t("dashboard.units_sold") : "Units Sold"}</span>
               </div>
               <span className="text-sm font-black text-slate-800">
                 {count.value}
@@ -340,7 +340,7 @@ export default function DashboardOverview() {
                 />
                 <Tooltip 
                   cursor={{ fill: '#f8fafc', opacity: 0.5 }} 
-                  content={(props) => <CustomTooltip {...props} symbol={symbol} />} 
+                  content={(props) => <CustomTooltip {...props} symbol={symbol} t={t} />} 
                 />
                 {/* Blue Bars representing Revenue (Earnings) */}
                 <Bar 

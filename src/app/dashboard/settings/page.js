@@ -104,7 +104,11 @@ export default function SettingsPage() {
 
       if (res.ok) {
         setSuccessMsg(t("settings.save_success"));
-        setTimeout(() => setSuccessMsg(""), 4000);
+        // Force-refresh session so sidebar Active Tenant name updates immediately
+        // We reload after a short delay so the user can see the success message
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
       } else {
         const errData = await res.json();
         setErrorMsg(errData.message || t("settings.save_failed"));
@@ -303,7 +307,7 @@ export default function SettingsPage() {
               </div>
               <input 
                 type="password" 
-                placeholder={formData.hasSmtpPass ? (language === "bn" ? "•••••••••••••••• (বর্তমানটি রাখতে খালি রাখুন)" : "•••••••••••••••• (Leave blank to keep current)") : (language === "bn" ? "অ্যাপ সুনির্দিষ্ট পাসওয়ার্ড লিখুন" : "Enter app specific password")}
+                placeholder={formData.hasSmtpPass ? (language === "bn" ? "পাসওয়ার্ড সেট আছে — পরিবর্তন করতে নতুন পাসওয়ার্ড লিখুন" : "Password already set — enter new password to change") : (language === "bn" ? "অ্যাপ সুনির্দিষ্ট পাসওয়ার্ড লিখুন" : "Enter app specific password")}
                 value={formData.smtpPass} 
                 onChange={(e) => setFormData({...formData, smtpPass: e.target.value})} 
                 className="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm py-2.5 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 

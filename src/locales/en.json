@@ -56,7 +56,9 @@
     "supplier_total": "Supplier total: {total}",
     "new_product_added": "New product added: {name}",
     "sku_stock": "SKU: {sku} - Stock: {stock}",
-    "no_revenue_data": "No revenue data available for this range."
+    "no_revenue_data": "No revenue data available for this range.",
+    "earnings": "Revenue",
+    "units_sold": "Units Sold"
   },
   "damages": {
     "title": "Damaged Items",
@@ -352,7 +354,10 @@
     "th_invoice": "INVOICE NUMBER",
     "th_plan": "PLAN TYPE",
     "th_amount": "AMOUNT PAID",
-    "th_status": "PAYMENT STATUS"
+    "th_status": "PAYMENT STATUS",
+    "payment_success": "Payment successful! Your subscription has been activated.",
+    "payment_cancelled": "Payment cancelled. Please try again.",
+    "pending": "Pending"
   },
   "customers": {
     "title": "Customers",
