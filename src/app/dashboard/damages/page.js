@@ -252,13 +252,12 @@ export default function DamagedItemsPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.date_logged")}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.product")}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.sku")}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.qty")}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.warehouse")}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.reason_desc")}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.status")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.date_logged")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.product")} ({t("damages.sku")})</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.qty")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.warehouse")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("damages.reason_desc")}</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">{t("damages.status")}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -270,30 +269,28 @@ export default function DamagedItemsPage() {
                 </tr>
               ) : (
                 filteredDamages.map((item) => (
-                  <tr key={item._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                  <tr key={item._id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-500">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-800">
-                      {item.productId?.name || "Deleted Product"}
+                    <td className="px-4 py-4 whitespace-nowrap text-xs font-bold text-gray-800">
+                      <div>{item.productId?.name || "Deleted Product"}</div>
+                      <div className="font-mono text-gray-500 text-[10px] mt-0.5">{item.productId?.sku || "N/A"}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500">
-                      {item.productId?.sku || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-rose-600 font-extrabold">
+                    <td className="px-4 py-4 whitespace-nowrap text-xs text-rose-600 font-extrabold">
                       -{item.quantity} {t("dashboard.units")}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                    <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-500">
                       {item.warehouseId ? (
                         <span className="flex items-center gap-1"><FaWarehouse className="text-[10px]" /> {item.warehouseId.name}</span>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="px-6 py-4 text-xs text-gray-600 font-medium max-w-xs truncate">
+                    <td className="px-4 py-4 text-xs text-gray-600 font-medium max-w-xs truncate">
                       {item.reason}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs">
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-xs sticky right-0 bg-white group-hover:bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800">
                         ⚠️ {t("damages.logged_status")}
                       </span>

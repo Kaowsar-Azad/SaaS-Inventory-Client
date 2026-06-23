@@ -418,15 +418,12 @@ export default function DuesReportPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.date")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.customer")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.product")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.qty")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.grand_total")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.paid")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.due")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.status")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.actions")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.date")} & {t("dues.customer")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.product")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.qty")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.grand_total")} / {t("dues.due")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.status")}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">{t("dues.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -440,29 +437,31 @@ export default function DuesReportPage() {
                     data.salesWithDues.map((sale) => {
                       const grandTotal = sale.totalAmount + (sale.taxAmount || 0);
                       return (
-                        <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(sale.createdAt).toLocaleDateString()}
+                        <tr key={sale._id} className="hover:bg-gray-50 transition-colors group">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="font-semibold text-gray-900">{sale.customerId?.name || "N/A"}</div>
+                            <div className="text-gray-500 text-[10px] mt-0.5">{new Date(sale.createdAt).toLocaleDateString()}</div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                            {sale.customerId?.name || "N/A"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                             {sale.productId?.name || "N/A"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sale.quantity}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${grandTotal.toFixed(2)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">${(sale.amountPaid || 0).toFixed(2)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">${(sale.amountDue || 0).toFixed(2)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{sale.quantity}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm">
+                            <div className="flex flex-col space-y-0.5">
+                              <span className="text-gray-900 font-bold">${grandTotal.toFixed(2)}</span>
+                              <span className="text-emerald-600 font-semibold text-[10px]">{t("dues.paid")}: ${(sale.amountPaid || 0).toFixed(2)}</span>
+                              {sale.amountDue > 0 && <span className="text-rose-600 font-semibold text-[10px]">{t("dues.due")}: ${(sale.amountDue || 0).toFixed(2)}</span>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm">
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-yellow-100 text-yellow-800">
                               {sale.paymentStatus || "partial"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-500 sticky right-0 bg-white group-hover:bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">
                             <button
                               onClick={() => handleOpenPaymentModal(sale, "sale")}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm ml-auto"
                             >
                               {t("dues.add_payment")} <FaArrowRight className="text-[10px]" />
                             </button>
@@ -562,15 +561,12 @@ export default function DuesReportPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.date")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.supplier")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.product")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.qty")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.grand_total")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.paid")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.due")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.status")}</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("dues.actions")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.date")} & {t("dues.supplier")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.product")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.qty")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.grand_total")} / {t("dues.due")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{t("dues.status")}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">{t("dues.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -582,29 +578,31 @@ export default function DuesReportPage() {
                     </tr>
                   ) : (
                     data.purchasesWithDues.map((purchase) => (
-                      <tr key={purchase._id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(purchase.createdAt).toLocaleDateString()}
+                      <tr key={purchase._id} className="hover:bg-gray-50 transition-colors group">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="font-semibold text-gray-900">{purchase.supplierId?.name || "N/A"}</div>
+                          <div className="text-gray-500 text-[10px] mt-0.5">{new Date(purchase.createdAt).toLocaleDateString()}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                          {purchase.supplierId?.name || "N/A"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                           {purchase.productId?.name || "N/A"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${purchase.totalAmount.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">${(purchase.amountPaid || 0).toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">${(purchase.amountDue || 0).toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm">
+                          <div className="flex flex-col space-y-0.5">
+                            <span className="text-gray-900 font-bold">${purchase.totalAmount.toFixed(2)}</span>
+                            <span className="text-emerald-600 font-semibold text-[10px]">{t("dues.paid")}: ${(purchase.amountPaid || 0).toFixed(2)}</span>
+                            {purchase.amountDue > 0 && <span className="text-rose-600 font-semibold text-[10px]">{t("dues.due")}: ${(purchase.amountDue || 0).toFixed(2)}</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm">
                           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-yellow-100 text-yellow-800">
                             {purchase.paymentStatus || "partial"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-500 sticky right-0 bg-white group-hover:bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">
                           <button
                             onClick={() => handleOpenPaymentModal(purchase, "purchase")}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm ml-auto"
                           >
                             {t("dues.add_payment")} <FaArrowRight className="text-[10px]" />
                           </button>

@@ -148,20 +148,18 @@ export default function PurchasesPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_date")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_supplier")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_product")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_qty")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_total")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_paid")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_due")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_status")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("purchases.table_actions")}</th>
-            </tr>
-          </thead>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{t("purchases.table_date")} & {t("purchases.table_supplier")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{t("purchases.table_product")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{t("purchases.table_qty")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{t("purchases.table_total")} / {t("purchases.table_due")}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{t("purchases.table_status")}</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">{t("purchases.table_actions")}</th>
+              </tr>
+            </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {purchases.length === 0 ? (
               <tr>
@@ -171,21 +169,23 @@ export default function PurchasesPage() {
               </tr>
             ) : (
               purchases.map((purchase) => (
-                <tr key={purchase._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(purchase.createdAt).toLocaleDateString()}
+                <tr key={purchase._id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
+                    <div className="font-medium text-gray-900">{purchase.supplierId?.name || "N/A"}</div>
+                    <div className="text-gray-500 text-[10px] mt-0.5">{new Date(purchase.createdAt).toLocaleDateString()}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {purchase.supplierId?.name || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                     {purchase.productId?.name || "N/A"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${purchase.totalAmount.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-semibold">${(purchase.amountPaid || 0).toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-rose-600 font-semibold">${(purchase.amountDue || 0).toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{purchase.quantity}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
+                    <div className="flex flex-col space-y-0.5">
+                      <span className="text-gray-900 font-bold">${purchase.totalAmount.toFixed(2)}</span>
+                      <span className="text-emerald-600 font-semibold text-[10px]">{t("purchases.table_paid")}: ${(purchase.amountPaid || 0).toFixed(2)}</span>
+                      {purchase.amountDue > 0 && <span className="text-rose-600 font-semibold text-[10px]">{t("purchases.table_due")}: ${(purchase.amountDue || 0).toFixed(2)}</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
                       purchase.paymentStatus === "paid"
                         ? "bg-green-100 text-green-800"
@@ -196,14 +196,16 @@ export default function PurchasesPage() {
                       {purchase.paymentStatus === "paid" ? t("billing.active") : purchase.paymentStatus === "partial" ? t("pos.due") : t("purchases.table_due")}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {purchase.amountDue > 0 && (
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-500 sticky right-0 bg-white group-hover:bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">
+                    {purchase.amountDue > 0 ? (
                       <button
                         onClick={() => handleOpenPaymentModal(purchase)}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded transition-all cursor-pointer shadow-sm"
                       >
                         {t("purchases.add_payment")}
                       </button>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
                     )}
                   </td>
                 </tr>
@@ -211,6 +213,7 @@ export default function PurchasesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <AddPaymentModal

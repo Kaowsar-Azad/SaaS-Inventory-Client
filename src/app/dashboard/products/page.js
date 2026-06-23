@@ -453,13 +453,12 @@ export default function ProductsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.name")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.sku")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.barcode")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.category")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.price")}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.stock_label")}</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">{t("products.actions")}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.name")}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.sku")} / {t("products.barcode")}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.category")}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.price")}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("products.stock_label")}</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px] sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">{t("products.actions")}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -471,8 +470,8 @@ export default function ProductsPage() {
               </tr>
             ) : (
               products.map((product) => (
-                <tr key={product._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={product._id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     <div>{product.name}</div>
                     {product.brand?.name && <div className="text-xs text-gray-400 mt-0.5">{t("products.brand")}: {product.brand.name}</div>}
                     {product.variants?.length > 0 && (
@@ -481,20 +480,22 @@ export default function ProductsPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.sku}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <ProductBarcode sku={product.sku} />
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex flex-col space-y-1">
+                      <span className="font-mono text-xs">{product.sku}</span>
+                      <ProductBarcode sku={product.sku} />
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category?.name || "—"}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${product.price}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{product.category?.name || "—"}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${product.price}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       product.stock > 10 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
                       {product.stock}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3 sticky right-0 bg-white group-hover:bg-gray-50 z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)]">
                     <button
                       onClick={() => {
                         setEditingProduct(product);
